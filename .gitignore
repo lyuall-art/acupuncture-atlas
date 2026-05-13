@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+backend/.venv/
+backend/__pycache__/
+
+# Env
+.env
+.env.local
+
+# Node
+node_modules/
+package-lock.json
+
+# TCM RAG (large PDFs, index files)
+tcm-sources/
+tcm-index*.json
+tcm-indexing.log
+tcm-rag*.py
+tcm-rag*.js
+
+# Skills
+skills/
+
+# Temp
+test_output.txt
+point_images_raw/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

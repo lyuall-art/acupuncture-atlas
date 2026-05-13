@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test Acupuncture</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen">
+<div id="app">
+  <div class="p-4">
+    <h1 class="text-xl text-amber-400">Test</h1>
+    <p class="text-slate-300">{{ message }}</p>
+    <button @click="message = 'Clicked!'" class="bg-amber-500 px-4 py-2 rounded">Click me</button>
+  </div>
+</div>
+<script>
+const { createApp, ref } = Vue;
+createApp({
+  setup() {
+    const message = ref('Hello!');
+    return { message };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

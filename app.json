@@ -1,0 +1,6 @@
+{
+  "title": "Atlas Acupuncture",
+  "description": "Interactive acupuncture atlas with detailed point locations, symptom-based prescriptions, and AI assistant powered by Ollama.",
+  "category": "Health",
+  "icon": "icon.svg"
+}

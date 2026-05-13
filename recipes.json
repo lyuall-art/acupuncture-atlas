@@ -1,0 +1,86 @@
+{
+  "recipes": [
+    {
+      "id": "chong_mai",
+      "name": "Chong Mai (Sea of Blood)",
+      "description": "The Sea of Blood, mother of all channels",
+      "image": "/atlas_images_small/p100_img0.jpeg",
+      "points": [
+        {"code": "SP4", "name": "Gongsun", "role": "Master point"},
+        {"code": "PC6", "name": "Neiguan", "role": "Command point"},
+        {"code": "ST29", "name": "Guilai", "role": "Local point"},
+        {"code": "ST36", "name": "Zusanli", "role": "Supporting"}
+      ],
+      "indications": ["Gynecological disorders", "Blood stagnation", "Menstrual pain"],
+      "created_by": "system"
+    },
+    {
+      "id": "dai_mai",
+      "name": "Dai Mai (Belt Channel)",
+      "description": "The belt channel, circles the waist",
+      "image": "/atlas_images_small/p206_img0.jpeg",
+      "points": [
+        {"code": "GB41", "name": "Zulinqi", "role": "Master point"},
+        {"code": "SP6", "name": "Sanyinjiao", "role": "Supporting"},
+        {"code": "GB26", "name": "Daimai", "role": "Local point"}
+      ],
+      "indications": ["Hip pain", "Leukorrhea", "Lower back issues"],
+      "created_by": "system"
+    },
+    {
+      "id": "ren_mai",
+      "name": "Ren Mai (Conception Vessel)",
+      "description": "Sea of Yin, regulates uterus and fertility",
+      "image": "/atlas_images_small/p100_img1.jpeg",
+      "points": [
+        {"code": "LU7", "name": "Lieque", "role": "Master point"},
+        {"code": "CV4", "name": "Guanyuan", "role": "Local point"},
+        {"code": "CV6", "name": "Qihai", "role": "Supporting"},
+        {"code": "CV12", "name": "Zhongwan", "role": "Harmonizing"}
+      ],
+      "indications": ["Gynecological", "Urinary", "Fertility"],
+      "created_by": "system"
+    },
+    {
+      "id": "abdominal_balancing",
+      "name": "Abdominal Balance (Fu Zhen)",
+      "description": "Balance treatment using abdominal points",
+      "image": "/atlas_images_small/p104_img0.jpeg",
+      "points": [
+        {"code": "ST25", "name": "Tianshu", "role": "Command point"},
+        {"code": "CV12", "name": "Zhongwan", "role": "Upper center"},
+        {"code": "CV6", "name": "Qihai", "role": "Lower center"},
+        {"code": "ST36", "name": "Zusanli", "role": "Supporting"}
+      ],
+      "indications": ["Digestive disorders", "Immunity", "Energy balancing"],
+      "created_by": "system"
+    },
+    {
+      "id": "yin_qiao_mai",
+      "name": "Yin Qiao Mai (Yin Heel Vessel)",
+      "description": "Yin heel vessel for yin deficiency",
+      "image": "/atlas_images_small/p210_img0.jpeg",
+      "points": [
+        {"code": "KI3", "name": "Taixi", "role": "Master point"},
+        {"code": "KI6", "name": "Zhaohai", "role": "Command point"},
+        {"code": "SP6", "name": "Sanyinjiao", "role": "Supporting"}
+      ],
+      "indications": ["Yin deficiency", "Insomnia", "Throat issues"],
+      "created_by": "system"
+    },
+    {
+      "id": "yang_qiao_mai",
+      "name": "Yang Qiao Mai (Yang Heel Vessel)",
+      "description": "Yang heel vessel for yang excess",
+      "image": "/atlas_images_small/p308_img0.jpeg",
+      "points": [
+        {"code": "BL62", "name": "Shenmai", "role": "Master point"},
+        {"code": "SI3", "name": "Houxi", "role": "Command point"},
+        {"code": "GB20", "name": "Fengchi", "role": "Supporting"}
+      ],
+      "indications": ["Yang excess", "Sleep disorders", "Motor issues"],
+      "created_by": "system"
+    }
+  ],
+  "custom_buttons": []
+}

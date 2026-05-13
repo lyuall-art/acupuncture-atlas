@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas Acupuncture</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 4px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes typing { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+  .point-svg { cursor: pointer; transition: all 0.2s; }
+  .point-svg:hover { filter: drop-shadow(0 0 6px rgba(245,158,11,0.8)); }
+  .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+  .fade-enter-from, .fade-leave-to { opacity: 0; }
+  .slide-enter-active, .slide-leave-active { transition: transform 0.3s, opacity 0.3s; }
+  .slide-enter-from { transform: translateX(100%); opacity: 0; }
+  .slide-leave-to { transform: translateX(100%); opacity: 0; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-hidden h-screen">
+<div id="app" v-cloak class="h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-700/50 px-4 py-2.5 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-2">
+      <svg class="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+        <circle cx="12" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+        <circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+      </svg>
+      <h1 class="text-lg font-semibold text-slate-100">Atlas Acupuncture</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'atlas' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">Atlas</span>
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'symptoms' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">Symptoms</span>
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'chat' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">AI</span>
+      <button @click="toggleSettings" class="p-1.5 rounded-lg hover:bg-slate-700/50 ml-1">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab navigation -->
+  <div class="flex border-b border-slate-700/50 bg-slate-900/50 shrink-0">
+    <button @click="currentTab = 'atlas'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'atlas' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">Atlas</button>
+    <button @click="currentTab = 'symptoms'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'symptoms' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">Symptoms</button>
+    <button @click="currentTab = 'chat'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'chat' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">AI Chat</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 overflow-hidden">
+
+    <!-- ATLAS TAB -->
+    <div v-show="currentTab === 'atlas'" class="h-full flex flex-col sm:flex-row">
+      <!-- Body diagram -->
+      <div class="sm:w-80 flex-shrink-0 overflow-y-auto scroll-thin p-3 bg-slate-900/30">
+        <!-- Search -->
+        <div class="mb-3">
+          <input v-model="atlasSearch" type="text" placeholder="Search points..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" />
+        </div>
+        <!-- Meridian filter -->
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          <button @click="activeMeridian = null" class="text-xs px-2 py-1 rounded-full transition" :class="!activeMeridian ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">All</button>
+          <button v-for="m in meridians" :key="m" @click="activeMeridian = activeMeridian === m ? null : m" class="text-xs px-2 py-1 rounded-full transition" :class="activeMeridian === m ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">{{ m }}</button>
+        </div>
+        <!-- Points list -->
+        <div v-for="point in filteredPoints" :key="point.code" @click="selectPoint(point)" class="mb-2 p-2.5 rounded-lg cursor-pointer transition" :class="selectedPoint?.code === point.code ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-slate-800/50 hover:bg-slate-800 border border-transparent'">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-amber-400 font-bold text-sm">{{ point.code }}</span>
+            <span class="text-[10px] text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">{{ point.meridian }}</span>
+          </div>
+          <p class="text-xs text-slate-300">{{ point.name }}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{{ point.location }}</p>
+        </div>
+      </div>
+
+      <!-- Point detail -->
+      <div class="flex-1 overflow-y-auto scroll-thin">
+        <div v-if="selectedPoint" class="p-4 max-w-2xl mx-auto">
+          <!-- Point header -->
+          <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 mb-4">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-2xl font-bold text-amber-400">{{ selectedPoint.code }}</span>
+                  <span class="text-sm text-slate-500">{{ selectedPoint.meridian }}</span>
+                </div>
+                <h2 class="text-lg text-slate-200">{{ selectedPoint.name }}</h2>
+              </div>
+              <button @click="selectedPoint = null" class="text-slate-400 hover:text-slate-200 p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Atlas Image -->
+          <div v-if="selectedPointImage" class="bg-slate-800/30 rounded-xl border border-slate-700/30 mb-4 overflow-hidden">
+            <img :src="selectedPointImage" :alt="selectedPoint.meridian" loading="lazy" class="w-full h-auto max-h-96 object-contain bg-slate-900" @error="imageError" />
+            <p class="text-[10px] text-slate-500 mt-1 px-3 pb-2 text-center">Atlas of Acupuncturology (Jaung-Geng Lin)</p>
+          </div>
+
+          <!-- Location -->
+          <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Location / How to find</h3>
+            <p class="text-sm text-slate-200 leading-relaxed">{{ selectedPoint.location }}</p>
+            <div v-if="selectedPoint.locationDetail" class="mt-2 text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3">
+              <p class="font-medium text-slate-300 mb-1">Step by step:</p>
+              <p>{{ selectedPoint.locationDetail }}</p>
+            </div>
+          </div>
+
+          <!-- Indications -->
+          <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Indications</h3>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="ind in selectedPoint.indications" :key="ind" class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full">{{ ind }}</span>
+            </div>
+          </div>
+
+          <!-- Technique -->
+          <div v-if="selectedPoint.technique" class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Needling technique</h3>
+            <p class="text-sm text-slate-300">{{ selectedPoint.technique }}</p>
+          </div>
+
+          <!-- Notes -->
+          <div v-if="selectedPoint.notes" class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Notes</h3>
+            <p class="text-sm text-slate-300">{{ selectedPoint.notes }}</p>
+          </div>
+
+          <!-- Ask AI about this point -->
+          <button @click="askAboutPoint(selectedPoint)" class="w-full bg-amber-500/10 text-amber-400 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition border border-amber-500/20">
+            Ask AI about this point
+          </button>
+        </div>
+
+        <!-- Default view - body diagram -->
+        <div v-else class="p-4">
+          <div class="bg-slate-800/30 rounded-xl p-6 border border-slate-700/30 text-center">
+            <svg viewBox="0 0 200 400" class="w-48 h-auto mx-auto mb-4">
+              <!-- Simplified body outline -->
+              <ellipse cx="100" cy="40" rx="22" ry="28" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <line x1="100" y1="68" x2="100" y2="80" stroke="#475569" stroke-width="2"/>
+              <!-- Torso -->
+              <path d="M70,80 Q100,75 130,80 L135,180 Q100,190 65,180 Z" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <!-- Arms -->
+              <line x1="70" y1="85" x2="35" y2="150" stroke="#475569" stroke-width="1.5"/>
+              <line x1="35" y1="150" x2="25" y2="220" stroke="#475569" stroke-width="1.5"/>
+              <line x1="130" y1="85" x2="165" y2="150" stroke="#475569" stroke-width="1.5"/>
+              <line x1="165" y1="150" x2="175" y2="220" stroke="#475569" stroke-width="1.5"/>
+              <!-- Legs -->
+              <line x1="85" y1="185" x2="80" y2="280" stroke="#475569" stroke-width="1.5"/>
+              <line x1="80" y1="280" x2="78" y2="360" stroke="#475569" stroke-width="1.5"/>
+              <line x1="115" y1="185" x2="120" y2="280" stroke="#475569" stroke-width="1.5"/>
+              <line x1="120" y1="280" x2="122" y2="360" stroke="#475569" stroke-width="1.5"/>
+
+              <!-- Meridian lines (simplified) -->
+              <!-- Governing Vessel (midline back) -->
+              <line x1="100" y1="12" x2="100" y2="185" stroke="#06b6d4" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6"/>
+              <!-- Stomach meridian -->
+              <line x1="115" y1="12" x2="115" y2="70" stroke="#22c55e" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+              <line x1="112" y1="180" x2="110" y2="360" stroke="#22c55e" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+              <!-- Large Intestine -->
+              <line x1="30" y1="220" x2="35" y2="150" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+
+              <!-- Points -->
+              <circle cx="100" cy="12" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="100" y="8" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="bold">GV20</text>
+
+              <circle cx="100" cy="52" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="115" y="54" fill="#94a3b8" font-size="5">LI20</text>
+
+              <circle cx="100" cy="100" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="115" y="102" fill="#94a3b8" font-size="5">CV17</text>
+
+              <circle cx="25" y="220" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="12" y="225" fill="#f59e0b" font-size="5" font-weight="bold">LI4</text>
+
+              <circle cx="35" y="155" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="15" y="150" fill="#94a3b8" font-size="5">LI11</text>
+
+              <circle cx="112" y="270" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="125" y="273" fill="#f59e0b" font-size="5" font-weight="bold">ST36</text>
+
+              <circle cx="110" y="310" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="123" y="313" fill="#94a3b8" font-size="5">SP6</text>
+
+              <circle cx="78" y="355" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="62" y="360" fill="#94a3b8" font-size="5">LV3</text>
+
+              <circle cx="80" y="285" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="63" y="285" fill="#94a3b8" font-size="5">GB34</text>
+            </svg>
+            <p class="text-slate-500 text-sm">Select a point from the list to see details</p>
+            <p class="text-slate-600 text-xs mt-1">{{ filteredPoints.length }} points available</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYMPTOMS TAB -->
+    <div v-show="currentTab === 'symptoms'" class="h-full overflow-y-auto scroll-thin p-4">
+      <div class="max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold text-slate-100 mb-4">Select a symptom</h2>
+        <!-- Symptom search -->
+        <div class="mb-4">
+          <input v-model="symptomSearch" type="text" placeholder="Search symptoms..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" />
+        </div>
+        <!-- Symptom categories -->
+        <div v-for="cat in filteredSymptomCategories" :key="cat.name" class="mb-4">
+          <h3 class="text-sm font-medium text-amber-400 mb-2">{{ cat.name }}</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button v-for="sym in cat.symptoms" :key="sym.name" @click="selectSymptom(sym)" class="text-left bg-slate-800/50 rounded-lg p-3 border border-slate-700/30 hover:bg-slate-800 hover:border-amber-500/30 transition">
+              <div class="text-sm text-slate-200 font-medium">{{ sym.name }}</div>
+              <div class="text-xs text-slate-500 mt-1">{{ sym.points.map(p => p.code).join(', ') }}</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Symptom detail modal -->
+      <transition name="slide">
+        <div v-if="selectedSymptom" class="fixed inset-0 z-30 bg-slate-950/90 backdrop-blur-sm overflow-y-auto scroll-thin">
+          <div class="min-h-screen p-4">
+            <div class="max-w-2xl mx-auto">
+              <button @click="selectedSymptom = null" class="mb-4 flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+                Back to symptoms
+              </button>
+              <h2 class="text-xl font-bold text-amber-400 mb-1">{{ selectedSymptom.name }}</h2>
+              <p class="text-sm text-slate-400 mb-4">{{ selectedSymptom.description }}</p>
+
+              <!-- Patterns tabs -->
+              <div v-if="selectedSymptom.patterns" class="mb-4">
+                <div class="flex gap-2 overflow-x-auto pb-2 scroll-thin">
+                  <button v-for="(pat, pi) in selectedSymptom.patterns" :key="pi" @click="activePattern = pi" class="shrink-0 text-xs px-3 py-1.5 rounded-full transition whitespace-nowrap" :class="activePattern === pi ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' : 'bg-slate-800 text-slate-400 border border-slate-700'">
+                    {{ pat.name }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Active pattern details -->
+              <div v-if="activePattern !== null && selectedSymptom.patterns?.[activePattern]" class="mb-4">
+                <div class="bg-amber-500/5 rounded-xl p-4 border border-amber-500/20 mb-3">
+                  <h3 class="text-sm font-semibold text-amber-400 mb-1">Pattern: {{ selectedSymptom.patterns[activePattern].name }}</h3>
+                  <p class="text-xs text-slate-400"><strong class="text-slate-300">Diagnostic clues:</strong> {{ selectedSymptom.patterns[activePattern].diagnosticQ }}</p>
+                </div>
+                <div class="space-y-3 mb-6">
+                  <div v-for="sp in selectedSymptom.patterns[activePattern].points" :key="sp.code" class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+                    <div class="flex items-start justify-between mb-2">
+                      <div>
+                        <span class="text-amber-400 font-bold text-lg">{{ sp.code }}</span>
+                        <span class="text-sm text-slate-300 ml-2">{{ sp.name }}</span>
+                      </div>
+                      <button @click="openPointInAtlas(sp)" class="text-xs text-amber-400 hover:text-amber-300">View in Atlas →</button>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-2"><strong class="text-slate-300">Find it:</strong> {{ sp.location }}</p>
+                    <p class="text-sm text-slate-300"><strong class="text-amber-400/80">Why:</strong> {{ sp.why }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fallback for old-style symptoms without patterns -->
+              <div v-else-if="selectedSymptom.points" class="space-y-3 mb-6">
+                <div v-for="sp in selectedSymptom.points" :key="sp.code" class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <span class="text-amber-400 font-bold text-lg">{{ sp.code }}</span>
+                      <span class="text-sm text-slate-300 ml-2">{{ sp.name }}</span>
+                    </div>
+                    <button @click="openPointInAtlas(sp)" class="text-xs text-amber-400 hover:text-amber-300">View in Atlas →</button>
+                  </div>
+                  <p class="text-xs text-slate-400 mb-2"><strong class="text-slate-300">Find it:</strong> {{ sp.location }}</p>
+                  <p class="text-sm text-slate-300"><strong class="text-amber-400/80">Why:</strong> {{ sp.why }}</p>
+                </div>
+              </div>
+
+              <!-- Ask AI -->
+              <button @click="askAboutSymptom(selectedSymptom)" class="w-full bg-amber-500/10 text-amber-400 py-3 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition border border-amber-500/20">
+                Ask AI for detailed prescription
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div v-show="currentTab === 'chat'" class="h-full flex flex-col">
+      <div class="flex-1 overflow-y-auto scroll-thin p-3 space-y-3" ref="chatMessages">
+        <div v-if="messages.length === 0" class="text-center py-12">
+          <svg class="w-14 h-14 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+          </svg>
+          <p class="text-slate-500 text-sm mb-4">Ask about points, symptoms, or treatments</p>
+          <div class="space-y-2 max-w-sm mx-auto">
+            <button @click="quickQuestion('Points for headache')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Points for headache?</button>
+            <button @click="quickQuestion('Tell me about ST36 Zusanli')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Tell me about ST36 Zusanli</button>
+            <button @click="quickQuestion('Recipe for stress and anxiety')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Recipe for stress and anxiety</button>
+          </div>
+        </div>
+        <div v-for="(msg, i) in messages" :key="i" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+          <div class="max-w-[88%] rounded-xl px-3 py-2.5 text-sm leading-relaxed" :class="msg.role === 'user' ? 'bg-amber-500/20 text-amber-100' : 'bg-slate-800 text-slate-200'">
+            <div v-html="formatMarkdown(msg.content)"></div>
+          </div>
+        </div>
+        <div v-if="isTyping" class="flex justify-start">
+          <div class="bg-slate-800 rounded-xl px-4 py-3 flex gap-1.5">
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+          </div>
+        </div>
+      </div>
+      <div class="p-3 border-t border-slate-700/50 shrink-0">
+        <form @submit.prevent="sendMessage" class="flex gap-2">
+          <input v-model="inputMessage" type="text" placeholder="Ask about acupuncture..." class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" :disabled="isTyping" />
+          <button type="submit" :disabled="!inputMessage.trim() || isTyping" class="bg-amber-500 text-slate-900 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-amber-400 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <transition name="fade">
+    <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="showSettings = false">
+      <div class="bg-slate-900 rounded-2xl p-6 w-full max-w-md mx-4 border border-slate-700/50 shadow-2xl max-h-[80vh] overflow-y-auto scroll-thin">
+        <h2 class="text-lg font-semibold text-slate-100 mb-4">Settings</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="flex items-center gap-2 text-sm text-slate-300 mb-2 cursor-pointer">
+              <input type="checkbox" v-model="useBackend" class="rounded bg-slate-700 border-slate-600 text-amber-500 focus:ring-amber-500" />
+              Use remote backend (Render/cloudflared)
+            </label>
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">{{ useBackend ? 'Backend URL' : 'Ollama URL' }}</label>
+            <input v-model="ollamaUrl" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50" :placeholder="useBackend ? 'https://your-app.onrender.com' : 'http://localhost:11434'" />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">Model</label>
+            <input v-model="modelName" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50" placeholder="qwen2.5:7b" />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">System prompt</label>
+            <textarea v-model="systemPrompt" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50 resize-none"></textarea>
+          </div>
+          <button @click="testConnection" class="w-full bg-slate-700 text-slate-200 py-2 rounded-lg text-sm hover:bg-slate-600 transition">Test Connection</button>
+        </div>
+        <button @click="showSettings = false" class="mt-4 w-full bg-amber-500 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition">Save & Close</button>
+      </div>
+    </div>
+  </transition>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+// Comprehensive acupuncture points with detailed location instructions
+// Atlas images from user's PDF (Atlas of Acupuncturology by Jaung-Geng Lin)
+const ATLAS_IMAGES = {
+  head: 'atlas_images/p000_img0.jpeg',
+  headFront: 'atlas_images/p000_img1.jpeg',
+  headBack: 'atlas_images/p001_img0.jpeg',
+  arm: 'atlas_images/p110_img0.jpeg',
+  foot: 'atlas_images/p200_img0.jpeg',
+  chest: 'atlas_images/p100_img0.jpeg',
+  back: 'atlas_images/p304_img0.jpeg',
+  stomach: 'atlas_images/p104_img0.jpeg',
+  spleen: 'atlas_images/p206_img0.jpeg',
+  liver: 'atlas_images/p217_img0.jpeg',
+  gallbladder: 'atlas_images/p117_img0.jpeg',
+  bladder: 'atlas_images/p308_img0.jpeg',
+  kidney: 'atlas_images/p210_img0.jpeg',
+  heart: 'atlas_images/p213_img0.jpeg',
+  lung: 'atlas_images/p211_img0.jpeg',
+  largeIntestine: 'atlas_images/p113_img0.jpeg',
+  governing: 'atlas_images/p310_img0.jpeg',
+  conception: 'atlas_images/p100_img1.jpeg',
+  sanjiao: 'atlas_images/p111_img0.jpeg',
+  smallIntestine: 'atlas_images/p113_img1.jpeg',
+  pericardium: 'atlas_images/p211_img1.jpeg',
+  extra: 'atlas_images/p314_img0.jpeg',
+};
+
+const POINTS = [
+{
+    code: 'GV20', name: 'Baihui (Hundred Convergences)', meridian: 'Governing Vessel',
+    location: 'On the top of the head, at the midpoint of the line connecting the apexes of both ears.',
+    locationDetail: '1. Find the top of each ear where it attaches to the head. 2. Draw an imaginary line connecting these two highest points, going over the top of the head. 3. The midpoint of this line, on the midline of the head, is GV20. It is slightly depressed (a small dent).',
+    indications: ['Headache', 'Dizziness', 'Insomnia', 'Anxiety', 'Depression', 'Prolapse', 'Poor memory', 'Foggy head'],
+    technique: 'Transverse insertion 0.5-0.8 cun. Can also be moxibustion.',
+    notes: 'One of the most important points. Meeting point of all yang meridians. Lifts yang qi.'
+  },,
+{
+    code: 'Yintang', name: 'Yintang (Hall of Impression)', meridian: 'Extra Point',
+    location: 'Midway between the medial ends of the two eyebrows, in the glabella region.',
+    locationDetail: '1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.',
+    indications: ['Anxiety', 'Insomnia', 'Headache', 'Nasal congestion', 'Eye strain', 'Palpitations', 'Dizziness'],
+    technique: 'Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.',
+    notes: 'Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa.'
+  },,
+{
+    code: 'LI20', name: 'Yingxiang (Welcome Fragrance)', meridian: 'Large Intestine',
+    location: 'In the nasolabial groove, at the level of the midpoint of the lateral border of the nostril.',
+    locationDetail: '1. Find the side (lateral border) of your nostril wing. 2. Go to the midpoint of that side. 3. The point is in the groove (nasolabial fold) right next to it, at the same level.',
+    indications: ['Nasal congestion', 'Sinusitis', 'Loss of smell', 'Nosebleed', 'Facial paralysis', 'Runny nose'],
+    technique: 'Oblique insertion 0.3-0.5 cun towards the nostril.',
+    notes: 'Bilateral point (both sides). Primary point for all nasal conditions.'
+  },,
+{
+    code: 'LI4', name: 'Hegu (Union Valley)', meridian: 'Large Intestine',
+    location: 'On the dorsum of the hand, between the 1st and 2nd metacarpal bones, approximately in the middle of the 2nd metacarpal bone, close to the radial border.',
+    locationDetail: '1. Squeeze your thumb and index finger together. 2. Find the highest point of the muscle bulge that forms. 3. That is LI4. Alternatively: slide your finger along the bone of the index finger toward the wrist, and you will feel a depression just before the V-shape between thumb and index finger bones.',
+    indications: ['Headache', 'Toothache', 'Facial pain', 'Neck pain', 'Fever', 'Common cold', 'Pain anywhere in the body', 'Menstrual pain'],
+    technique: 'Perpendicular insertion 0.5-1.0 cun. Strong sensation (De Qi) is expected.',
+    notes: 'CONTRAINDICATED in pregnancy. Master analgesic (pain relief) point. The "go-to" point for any pain in the upper body, especially face and head.'
+  },,
+{
+    code: 'LI11', name: 'Quchi (Pool at the Crook)', meridian: 'Large Intestine',
+    location: 'At the lateral end of the transverse cubital crease, when the elbow is flexed, midway between LU5 and the lateral epicondyle of the humerus.',
+    locationDetail: '1. Bend your elbow to 90 degrees. 2. You will see a crease (fold) at the outside of the elbow. 3. The point is at the outer end of this crease, in the depression between the bone prominence (lateral epicondyle) and the tendon.',
+    indications: ['Fever', 'Skin disorders', 'Sore throat', 'Arm pain', 'Hypertension', 'Itching', 'Eczema', 'Urticaria'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Clears heat from the body. Very important for skin conditions and fever.'
+  },,
+{
+    code: 'PC6', name: 'Neiguan (Inner Pass)', meridian: 'Pericardium',
+    location: 'On the palmar aspect of the forearm, 2 cun above the transverse crease of the wrist, between the tendons of palmaris longus and flexor carpi radialis.',
+    locationDetail: '1. Turn your palm upward. 2. Find the wrist crease (the first major crease at the base of the palm). 3. Measure 2 cun (about 3 finger widths of your own hand) up from the crease toward the elbow. 4. The point is between two tendons — flex your wrist slightly to see them. It is in the middle depression between them.',
+    indications: ['Nausea', 'Vomiting', 'Motion sickness', 'Chest pain', 'Anxiety', 'Insomnia', 'Heart palpitations', 'Stomach pain'],
+    technique: 'Perpendicular insertion 0.5-1.0 cun.',
+    notes: 'The primary anti-nausea point. Used for morning sickness, chemotherapy nausea, motion sickness. Calms the spirit.'
+  },,
+{
+    code: 'HT7', name: 'Shenmen (Spirit Gate)', meridian: 'Heart',
+    location: 'On the palmar aspect of the wrist, in the depression on the radial side of the tendon of flexor carpi ulnaris, at the ulnar end of the transverse crease.',
+    locationDetail: '1. Turn your palm upward. 2. Find the wrist crease on the pinky-finger side (ulnar side). 3. Feel for the prominent tendon (flexor carpi ulnaris) on that side. 4. The point is in the small depression just on the thumb-side (radial side) of this tendon, right at the wrist crease.',
+    indications: ['Insomnia', 'Anxiety', 'Heart palpitations', 'Poor memory', 'Depression', 'Mania', 'Chest pain', 'Irritability'],
+    technique: 'Perpendicular insertion 0.3-0.5 cun.',
+    notes: 'The most important point for calming the spirit (Shen). Primary point for mental-emotional disorders.'
+  },,
+{
+    code: 'CV17', name: 'Danzhong (Chest Center)', meridian: 'Conception Vessel',
+    location: 'On the anterior midline, at the level of the 4th intercostal space, in the center of the sternum.',
+    locationDetail: '1. Find your nipples — they are approximately at the level of the 4th intercostal space. 2. Draw a horizontal line between them across the sternum (breastbone). 3. The midpoint of this line, on the center of the sternum, is CV17.',
+    indications: ['Chest tightness', 'Shortness of breath', 'Anxiety', 'Palpitations', 'Insufficient lactation', 'Hiccups', 'Depression'],
+    technique: 'Transverse insertion upward 0.3-0.5 cun. Do not needle deeply.',
+    notes: 'Influential point for Qi. Opens the chest, regulates qi flow. Front-Mu point of the Pericardium.'
+  },,
+{
+    code: 'CV12', name: 'Zhongwan (Middle Epigastrium)', meridian: 'Conception Vessel',
+    location: 'On the anterior midline, 4 cun above the umbilicus.',
+    locationDetail: '1. Find your belly button (umbilicus). 2. Find the bottom of your sternum (breastbone) — the xiphoid process. 3. The midpoint between the umbilicus and the xiphoid process is CV12. Or measure 4 cun (about 5 finger widths) straight up from the navel.',
+    indications: ['Stomach pain', 'Nausea', 'Vomiting', 'Acid reflux', 'Bloating', 'Poor appetite', 'Diarrhea', 'Fatigue'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Front-Mu point of the Stomach. Influential point for Fu organs. The primary point for all stomach/digestive issues.'
+  },,
+{
+    code: 'CV6', name: 'Qihai (Sea of Qi)', meridian: 'Conception Vessel',
+    location: 'On the anterior midline, 1.5 cun below the umbilicus.',
+    locationDetail: '1. Find your belly button. 2. Measure about 2 finger widths (1.5 cun) straight down from the center of the navel. That is CV6.',
+    indications: ['Fatigue', 'Weakness', 'Abdominal pain', 'Diarrhea', 'Frequent urination', 'Impotence', 'Menstrual disorders', 'Cold in the lower abdomen'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective here.',
+    notes: 'Major tonification point. Strengthens the whole body. Often used with moxa.'
+  },,
+{
+    code: 'ST25', name: 'Tianshu (Heavenly Pivot)', meridian: 'Stomach',
+    location: 'On the abdomen, 2 cun lateral to the center of the umbilicus.',
+    locationDetail: '1. Find your belly button. 2. Measure 2 cun (about 3 finger widths of your own hand) to the left or right of the center of the navel. The point is on both sides.',
+    indications: ['Abdominal pain', 'Diarrhea', 'Constipation', 'Bloating', 'Dysentery', 'Irregular menstruation'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Front-Mu point of the Large Intestine. Regulates the intestines — used for both diarrhea AND constipation.'
+  },,
+{
+    code: 'ST36', name: 'Zusanli (Leg Three Li)', meridian: 'Stomach',
+    location: 'On the anterior aspect of the leg, 3 cun below the lower border of the patella (kneecap), one finger-breadth (middle finger) lateral from the anterior crest of the tibia.',
+    locationDetail: '1. Sit with your knee bent. 2. Find the bottom edge of your kneecap (patella). 3. Place four fingers of your hand (excluding the thumb) in a row below the kneecap — the width of four fingers is approximately 3 cun. 4. The point is just outside (lateral to) the shin bone, in a depression you can feel when you press. When you flex your foot up and down, you can feel a muscle moving — the point is in that muscle.',
+    indications: ['Digestive disorders', 'Fatigue', 'Weakness', 'Immunity boost', 'Nausea', 'Vomiting', 'Diarrhea', 'Dizziness', 'Insomnia', 'Pain in the knee/leg'],
+    technique: 'Perpendicular insertion 1.0-2.0 cun. Strong De Qi sensation expected.',
+    notes: 'THE master tonification point in all of acupuncture. "Three Li" means it gives you energy to walk three more miles. Used for virtually any deficiency condition. Moxa here is very powerful.'
+  },,
+{
+    code: 'ST40', name: 'Fenglong (Abundant Bulge)', meridian: 'Stomach',
+    location: 'On the anterior aspect of the leg, 8 cun above the tip of the external malleolus (outer ankle), 2 finger-breadths lateral to the anterior border of the tibia.',
+    locationDetail: '1. Find the outer ankle bone prominence. 2. Measure 8 cun (about the distance from the outer ankle to just below the knee) up the leg. 3. The point is about 2 finger widths to the outside of the shin bone, on the front-outer side of the lower leg.',
+    indications: ['Phlegm', 'Dizziness', 'Cough with phlegm', 'Asthma', 'Mental confusion', 'Heaviness of body', 'Swelling'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'The primary point for resolving phlegm in Chinese medicine. Used for "visible" phlegm (cough) and "invisible" phlegm (dizziness, mental fog, nodules).'
+  },,
+{
+    code: 'SP6', name: 'Sanyinjiao (Three Yin Intersection)', meridian: 'Spleen',
+    location: 'On the medial aspect of the leg, 3 cun above the tip of the medial malleolus (inner ankle bone), in the depression posterior to the medial border of the tibia.',
+    locationDetail: '1. Find the inner ankle bone (medial malleolus) — the bony bump on the inside of your ankle. 2. Place four fingers (excluding thumb) of your hand stacked above the top of this bone. 3. The point is 3 cun up (about the width of your four fingers), just behind the edge of the shin bone (tibia). You will feel a depression there.',
+    indications: ['Menstrual disorders', 'Infertility', 'Insomnia', 'Digestive issues', 'Urinary problems', 'Edema', 'Gynecological disorders', 'Fatigue'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'CONTRAINDICATED in pregnancy. Meeting point of the Spleen, Liver, and Kidney meridians (all three yin meridians of the leg). Extremely versatile — one of the most commonly used points.'
+  },,
+{
+    code: 'GB34', name: 'Yanglingquan (Yang Mound Spring)', meridian: 'Gallbladder',
+    location: 'On the lateral aspect of the leg, in the depression anterior and inferior to the head of the fibula (the bony bump on the outside of the knee).',
+    locationDetail: '1. Sit with your knee bent. 2. Feel the outside (lateral side) of your knee for a bony bump — that is the head of the fibula. 3. The point is in the depression just in front of and slightly below this bony bump. Press and you will feel a tender spot.',
+    indications: ['Leg pain', 'Knee pain', 'Sciatica', 'Hip pain', 'Stiffness of tendons/muscles', 'Weakness of lower limbs', 'Jaundice'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Influential point for tendons/muscles. The go-to point for any tendon, ligament, or muscle problem in the body.'
+  },,
+{
+    code: 'GB20', name: 'Fengchi (Wind Pool)', meridian: 'Gallbladder',
+    location: 'In the depression between the upper portion of the sternocleidomastoid muscle and the trapezius muscle, at the base of the skull.',
+    locationDetail: '1. Find the base of your skull (occipital bone) — the hard bony ridge at the back of your head. 2. Feel for two large vertical muscles on the back of your neck (trapezius muscles). 3. The points are in the two hollows/depressions at the base of the skull, just outside these neck muscles, on both sides. They are level with the earlobes.',
+    indications: ['Headache', 'Neck stiffness', 'Neck pain', 'Common cold', 'Dizziness', 'Blurred vision', 'Tinnitus', 'Hypertension'],
+    technique: 'Oblique insertion toward the tip of the nose 0.5-0.8 cun. Do not needle too deeply.',
+    notes: 'Bilateral point. Primary point for expelling wind (cold/flu). Excellent for tension headaches and neck problems.'
+  },,
+{
+    code: 'LV3', name: 'Taichong (Great Surge)', meridian: 'Liver',
+    location: 'On the dorsum of the foot, in the depression distal to the junction of the 1st and 2nd metatarsal bones.',
+    locationDetail: '1. Find the space between your big toe and second toe. 2. Slide your finger back along this gap toward the ankle. 3. You will feel where the two bones (metatarsals) come together in a V-shape. 4. The point is in the depression just before this V-junction, about 1.5-2 cun back from the toe web.',
+    indications: ['Headache', 'Dizziness', 'Eye pain', 'Menstrual disorders', 'Stress', 'Anger', 'Irritability', 'Hypertension', 'Depression'],
+    technique: 'Perpendicular insertion 0.5-0.8 cun.',
+    notes: 'Source point of the Liver meridian. Spreads Liver Qi — the primary point for stress, anger, frustration, and emotional tension. Paired with LI4 (Four Gates) for maximum pain relief and stress reduction.'
+  },,
+{
+    code: 'KI3', name: 'Taixi (Great Stream)', meridian: 'Kidney',
+    location: 'In the depression between the medial malleolus (inner ankle bone) and the Achilles tendon.',
+    locationDetail: '1. Find the inner ankle bone (medial malleolus). 2. Find the large Achilles tendon at the back of the ankle. 3. The point is in the hollow/depression between these two structures. You can feel the pulse here.',
+    indications: ['Lower back pain', 'Tinnitus', 'Hearing loss', 'Insomnia', 'Asthma', 'Frequent urination', 'Impotence', 'Sore throat', 'Toothache', 'Weakness of legs'],
+    technique: 'Perpendicular insertion 0.5-0.8 cun.',
+    notes: 'Source point of the Kidney meridian. Tonifies both Kidney Yin and Kidney Yang. One of the most important tonification points.'
+  },,
+{
+    code: 'BL40', name: 'Weizhong (Middle of the Bend)', meridian: 'Bladder',
+    location: 'In the center of the transverse crease of the popliteal fossa (back of the knee), midway between the tendons of biceps femoris and semitendinosus.',
+    locationDetail: '1. Stand or lie face down. 2. Bend your knee slightly. 3. You will see a crease (fold) at the back of the knee. 4. The point is exactly in the center of this crease, in the middle of the back of the knee.',
+    indications: ['Lower back pain', 'Sciatica', 'Leg weakness', 'Knee pain', 'Hip pain', 'Skin disorders'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun. Can also bleed (prick to draw blood) for acute back pain.',
+    notes: 'Command point for the back and lumbar region. "Back and lumbar: seek Weizhong." Bleeding this point is classic for acute lower back strain.'
+  },,
+{
+    code: 'GV14', name: 'Dazhui (Great Vertebra)', meridian: 'Governing Vessel',
+    location: 'Below the spinous process of the 7th cervical vertebra (C7), on the posterior midline.',
+    locationDetail: '1. Tilt your head forward (chin to chest). 2. Feel the back of your neck for the most prominent bony bump — that is C7 (the vertebra prominens). 3. The point is in the depression directly below this bony bump, on the midline.',
+    indications: ['Fever', 'Common cold', 'Neck stiffness', 'Cough', 'Asthma', 'Epilepsy', 'Night sweating'],
+    technique: 'Oblique insertion upward 0.5-1.0 cun.',
+    notes: 'Meeting point of all yang meridians. Clears heat, releases the exterior. Very important for fever and infections.'
+  },,
+{
+    code: 'BL13', name: 'Feishu (Lung Shu)', meridian: 'Bladder',
+    location: '1.5 cun lateral to the lower border of the spinous process of the 3rd thoracic vertebra (T3).',
+    locationDetail: '1. Find GV14 (below C7, the big bump at the base of the neck). 2. Count down 3 bony bumps (spinous processes) — that is T3. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right.',
+    indications: ['Cough', 'Asthma', 'Chest tightness', 'Common cold', 'Skin disorders', 'Spontaneous sweating', 'Night sweating'],
+    technique: 'Oblique insertion 0.5-0.8 cun toward the spine. Do not needle too deeply.',
+    notes: 'Back-Shu point of the Lungs. Primary back point for all lung/respiratory conditions.'
+  },,
+{
+    code: 'BL23', name: 'Shenshu (Kidney Shu)', meridian: 'Bladder',
+    location: '1.5 cun lateral to the lower border of the spinous process of the 2nd lumbar vertebra (L2).',
+    locationDetail: '1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps — that is L2. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right. This is roughly at waist level.',
+    indications: ['Lower back pain', 'Tinnitus', 'Hearing loss', 'Frequent urination', 'Impotence', 'Menstrual disorders', 'Chronic fatigue', 'Weakness of knees'],
+    technique: 'Perpendicular insertion 0.5-1.0 cun.',
+    notes: 'Back-Shu point of the Kidneys. Tonifies Kidney qi, yin, and yang. Essential for chronic deficiency conditions.'
+  },,
+{
+    code: 'ST6', name: 'Jiache (Jaw Bone)', meridian: 'Stomach',
+    location: 'One finger-breadth anterior and superior to the angle of the mandible, where the masseter muscle is prominent when the teeth are clenched.',
+    locationDetail: '1. Clench your teeth — you will feel a muscle bulge on the side of your jaw (masseter). 2. Find the angle of your jaw (where the lower jawbone turns upward). 3. The point is about one finger width in front of and slightly above this angle, in the bulging muscle.',
+    indications: ['Toothache', 'Facial paralysis', 'Jaw pain', 'TMJ disorder', 'Mumps', 'Lockjaw', 'Facial swelling'],
+    technique: 'Perpendicular or oblique insertion 0.3-0.5 cun.',
+    notes: 'Bilateral point. Primary local point for jaw and tooth problems.'
+  },,
+{
+    code: 'SJ5', name: 'Waiguan (Outer Pass)', meridian: 'San Jiao',
+    location: 'On the dorsal aspect of the forearm, 2 cun above the transverse crease of the wrist, between the radius and ulna.',
+    locationDetail: '1. Turn your forearm palm-down. 2. Find the wrist crease on the back of the hand. 3. Measure 2 cun (about 3 finger widths) up from the crease toward the elbow. 4. The point is between the two forearm bones (radius and ulna), in the center of the back of the forearm.',
+    indications: ['Headache', 'Neck pain', 'Common cold', 'Fever', 'Ear pain', 'Tinnitus', 'Pain in the arm', 'Hypochondriac pain'],
+    technique: 'Perpendicular insertion 0.5-1.0 cun.',
+    notes: 'Connecting (Luo) point. Paired with GB20 for exterior conditions (cold/flu). Opens the Shaoyang channel.'
+  },,
+{
+    code: 'SJ17', name: 'Yifeng (Wind Screen)', meridian: 'San Jiao',
+    location: 'Posterior to the lobule of the ear, in the depression between the mandible and the mastoid process.',
+    locationDetail: '1. Find your earlobe. 2. Behind the earlobe, feel for a bony prominence (mastoid process). 3. Between the jawbone and this bony bump is a depression — that is SJ17.',
+    indications: ['Tinnitus', 'Deafness', 'Ear pain', 'Facial paralysis', 'Trigeminal neuralgia', 'Swelling of the cheek'],
+    technique: 'Perpendicular insertion 0.5-1.0 cun.',
+    notes: 'Bilateral point. Primary local point for ear disorders.'
+  },,
+{
+    code: 'GB8', name: 'Shuaigu (Leading Valley)', meridian: 'Gallbladder',
+    location: 'Directly above the apex of the ear, 1.5 cun within the hairline, on the temporal region.',
+    locationDetail: '1. Find the very top point (apex) of your ear where it folds over. 2. Go straight up from there into the hairline. 3. About 1.5 cun (2 finger widths) up is the point.',
+    indications: ['Migraine', 'Headache at the side of the head', 'Vomiting', 'Ear pain', 'Dizziness'],
+    technique: 'Transverse insertion 0.5-0.8 cun.',
+    notes: 'Bilateral point. Excellent for temporal headaches and migraines.'
+  },,
+{
+    code: 'LR14', name: 'Qimen (Cycle Gate)', meridian: 'Liver',
+    location: 'Directly below the nipple, in the 6th intercostal space, on the midclavicular line.',
+    locationDetail: '1. Find the nipple (approximately 4th intercostal space in men). 2. Count down two rib spaces (intercostal spaces) to the 6th. 3. On the line dropping straight down from the nipple (midclavicular line), in the space between the 6th and 7th ribs.',
+    indications: ['Hypochondriac pain', 'Depression', 'Irritability', 'Vomiting', 'Hiccups', 'Jaundice', 'Breast pain'],
+    technique: 'Oblique or transverse insertion 0.5-0.8 cun. Do not needle deeply.',
+    notes: 'Front-Mu point of the Liver. Regulates Liver Qi in the chest and hypochondrium.'
+  },,
+{
+    code: 'ST44', name: 'Neiting (Inside Mound)', meridian: 'Stomach',
+    location: 'On the dorsum of the foot, proximal to the 2nd toe, at the junction of the red and white skin.',
+    locationDetail: '1. Find the 2nd toe. 2. At the base of the toe, on the top of the foot, where the skin color changes from pink to darker (red-white junction).',
+    indications: ['Fever', 'Swollen gums', 'Burning sensation in stomach', 'Thirst', 'Pain in foot', 'Mania'],
+    technique: 'Oblique insertion 0.3-0.5 cun.',
+    notes: 'Ying-Spring point of Stomach. Clears heat, especially Stomach fire.'
+  },,
+{
+    code: 'BL25', name: 'Dachangshu (Large Intestine Shu)', meridian: 'Bladder',
+    location: '1.5 cun lateral to the lower border of the spinous process of the 4th lumbar vertebra (L4).',
+    locationDetail: '1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 0 (L4 is at hip level). 3. From the lower edge of this bump, measure 1.5 cun (2 finger widths) to the left or right.',
+    indications: ['Diarrhea', 'Constipation', 'Abdominal pain', 'Dysentery', 'Irregular menstruation'],
+    technique: 'Oblique insertion 0.8-1.2 cun toward the spine.',
+    notes: 'Back-Shu point of the Large Intestine. Local point for lower jiao issues.'
+  },,
+{
+    code: 'CV4', name: 'Guanyuan (Gate of Origin)', meridian: 'Conception Vessel',
+    location: 'On the anterior midline, 3 cun below the umbilicus.',
+    locationDetail: '1. Find your belly button. 2. Measure 3 cun (about 4 finger widths) straight down from the navel. That is CV4.',
+    indications: ['Impotence', 'Premature ejaculation', 'Frequent urination', 'Enuresis', 'Irregular menstruation', 'Leukorrhea', 'Lower abdominal pain'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective.',
+    notes: 'Front-Mu point of the Small Intestine. Major tonification point for Kidney and Original Qi.'
+  },,
+{
+    code: 'SP9', name: 'Yinlingquan (Yin Mound Spring)', meridian: 'Spleen',
+    location: 'In the depression at the angle formed by the medial condyle of the tibia and the posterior border of the tibia.',
+    locationDetail: '1. Find the inner (medial) side of your knee. 2. Feel for the bony bump on the inner side of the knee (medial condyle of tibia). 3. The point is in the depression at the angle formed by this bone and the shin bone, just below the knee.',
+    indications: ['Edema', 'Abdominal distension', 'Diarrhea', 'Dysuria', 'Menstrual disorders', 'Leukorrhea'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'He-Sea point of Spleen. Resolves dampness, transforms phlegm.'
+  },,
+{
+    code: 'SP8', name: 'Diji (Earth Mound)', meridian: 'Spleen',
+    location: '3 cun directly below SP9, on the medial border of the tibia.',
+    locationDetail: '1. Find SP9 (Yinlingquan) on the inner knee. 2. Measure 3 cun (about 4 finger widths) straight down along the inner edge of the shin bone (tibia). The point is on the medial border of the tibia.',
+    indications: ['Menstrual disorders', 'Dysmenorrhea', 'Irregular menstruation', 'Abdominal pain', 'Male infertility'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Xi-Cleft point of Spleen. Important for gynecological issues.'
+  },,
+{
+    code: 'KI6', name: 'Zhaohai (Shining Sea)', meridian: 'Kidney',
+    location: 'In the depression below the tip of the medial malleolus, in the sulcus formed by the medial border of the Achilles tendon.',
+    locationDetail: '1. Find the inner ankle bone (medial malleolus). 2. Feel for the tip (bottom) of this bone. 3. The point is in the depression just below this tip, in the groove between the ankle bone and the Achilles tendon.',
+    indications: ['Sore throat', 'Dry cough', 'Insomnia', 'Irritability', 'Tinnitus', 'Night sweating', 'Irregular menstruation'],
+    technique: 'Perpendicular insertion 0.5-0.8 cun.',
+    notes: 'Xi-Cleft point of Kidney. Nourishes Yin, clears deficiency heat.'
+  },,
+{
+    code: 'GV4', name: 'Mingmen (Gate of Life)', meridian: 'Governing Vessel',
+    location: 'Below the spinous process of the 2nd lumbar vertebra (L2).',
+    locationDetail: '1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps (L3, then L2). 3. The point is in the depression directly below this bump, on the midline. This is roughly at waist level.',
+    indications: ['Lower back pain', 'Impotence', 'Premature ejaculation', 'Irregular menstruation', 'Diarrhea', 'Nocturnal emissions'],
+    technique: 'Oblique insertion upward 0.5-1.0 cun.',
+    notes: 'One of the most important points for tonifying Kidney Yang. "Gate of Life."'
+  },,
+{
+    code: 'GB30', name: 'Huantiao (Jumping Circle)', meridian: 'Gallbladder',
+    location: 'At the junction of the lateral 1/3 and medial 2/3 of the distance between the greater trochanter and the hiatus of the sacrum.',
+    locationDetail: '1. Find the bony bump on the outer hip (greater trochanter). 2. Find the top of the buttock crease (hiatus of sacrum). 3. Divide this distance into 3 parts. The point is at the junction of the outer 1/3 and inner 2/3. Alternatively: with the leg bent, the point is at the outer hip, directly above the buttock crease.',
+    indications: ['Sciatica', 'Pain in hip and thigh', 'Motor impairment of lower limb', 'Hemiplegia', 'Lumbar pain'],
+    technique: 'Perpendicular insertion 2.0-3.0 cun toward the pubic symphysis.',
+    notes: 'Command point for hip and sciatica. Major point for lower body pain.'
+  },,
+{
+    code: 'SP10', name: 'Xuehai (Sea of Blood)', meridian: 'Spleen',
+    location: 'On the medial aspect of the thigh, 2 cun above the mediosuperior border of the patella.',
+    locationDetail: '1. Sit with your knee bent. 2. Find the top inner corner of the kneecap (patella). 3. Measure 2 cun (about 3 finger widths) up along the inner thigh. The point is on the inner thigh, in the bulge of the muscle (vastus medialis).',
+    indications: ['Menstrual disorders', 'Skin disorders', 'Itching', 'Eczema', 'Urticaria', 'Cold or heat in the uterus'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Meeting point of Spleen and Chong Mai. Major point for blood-related issues and skin conditions.'
+  },,
+{
+    code: 'GV1', name: 'Changqiang (Long Strong)', meridian: 'Governing Vessel',
+    location: 'Below the tip of the coccyx, at the junction of the sacrum and coccyx.',
+    locationDetail: '1. Feel for the tailbone (coccyx) at the very bottom of your spine. 2. The point is in the depression just below the tip of the coccyx, in the midline.',
+    indications: ['Diarrhea', 'Hemorrhoids', 'Constipation', 'Lower back pain', 'Prolapse of rectum', 'Mental disorders'],
+    technique: 'Oblique insertion upward 0.5-1.0 cun toward the pubic symphysis.',
+    notes: 'Meeting point of Governing Vessel and Kidney meridian. Local point for rectal issues.'
+  },,
+{
+    code: 'ST29', name: 'Guilai (Return)', meridian: 'Stomach',
+    location: '4 cun below the umbilicus, 2 cun lateral to the anterior midline.',
+    locationDetail: '1. Find your belly button. 2. Measure 4 cun (about 5 finger widths) straight down. 3. From this point, measure 2 cun (3 finger widths) to the left or right. This is at the level of the top of the pubic bone.',
+    indications: ['Irregular menstruation', 'Dysmenorrhea', 'Leukorrhea', 'Infertility', 'Lower abdominal pain', 'Hernia'],
+    technique: 'Perpendicular insertion 1.0-1.5 cun.',
+    notes: 'Local point for gynecological issues. "Return" — returns the qi to the lower jiao.'
+  },,
+{
+    code: 'LU7', name: 'Lieque (Broken Sequence)', meridian: 'Lung',
+    location: 'On the radial aspect of the forearm, 1.5 cun above the transverse crease of the wrist, in the cleft between the tendons.',
+    locationDetail: '1. Turn your palm upward. 2. Find the wrist crease. 3. Measure 1.5 cun (2 finger widths) up from the crease toward the elbow. 4. The point is in the depression on the thumb side (radial side) of the prominent bone (styloid process of radius).',
+    indications: ['Cough', 'Asthma', 'Sore throat', 'Headache', 'Stiff neck', 'Toothache', 'Facial paralysis'],
+    technique: 'Oblique insertion 0.2-0.3 cun.',
+    notes: 'Connecting (Luo) point of Lung. Opens the Ren Mai. "Release the exterior" point for Lung issues.'
+  },,
+{
+    code: 'SI3', name: 'Houxi (Back Stream)', meridian: 'Small Intestine',
+    location: 'On the ulnar end of the transverse crease of the dorsal aspect of the wrist, in the depression on the ulnar side of the 5th metacarpal bone.',
+    locationDetail: '1. Make a fist. 2. On the back of your hand, find the pinky side (ulnar side). 3. At the wrist crease, in the depression just beside the bony bump of the 5th metacarpal bone base. 4. The point is on the pinky-finger side of this bone.',
+    indications: ['Neck pain', 'Headache', 'Stiff neck', 'Malaria', 'Nasal congestion', 'Mental disorders', 'Night blindness'],
+    technique: 'Perpendicular insertion 0.3-0.5 cun.',
+    notes: 'Shu-Stream point of Small Intestine. Opens the Du Mai (Governing Vessel). Classic for neck and head issues.'
+  },,
+{
+    code: 'GV27', name: 'Duiduan (Extremity of the Mouth)', meridian: 'Governing Vessel',
+    location: 'At the tip of the central part of the upper lip.',
+    locationDetail: '1. Lift your upper lip. 2. The point is at the center of the upper lip, right at the base where it meets the gum.',
+    indications: ['Wind stroke', 'Mania', 'Coma', 'Facial paralysis', 'Nasal congestion', 'Swollen lips'],
+    technique: 'Oblique insertion upward 0.1-0.2 cun.',
+    notes: 'Meeting point of Governing Vessel and Conception Vessel.'
+  },,
+{
+    code: 'EX-HN3', name: 'Yintang (Hall of Impression)', meridian: 'Extra Point',
+    location: 'Midway between the medial ends of the two eyebrows, in the glabella region.',
+    locationDetail: '1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.',
+    indications: ['Anxiety', 'Insomnia', 'Headache', 'Nasal congestion', 'Eye strain', 'Palpitations', 'Dizziness'],
+    technique: 'Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.',
+    notes: 'Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa.'
+  },
+];
+
+const MERIDIANS = [...new Set(POINTS.map(p => p.meridian))];
+
+const MERIDIANS = [...new Set(POINTS.map(p => p.meridian))];
+
+const SYMPTOM_CATEGORIES = [
+  {
+    name: 'Head & Face',
+    symptoms: [
+      {
+        name: 'Headache (general)',
+        description: 'General headache, tension headache',
+        patterns: [
+          {
+            name: 'Liver Yang Rising',
+            points: [
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Source point of Liver. Drains ascending Liver Yang.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Subdues rising Yang, calms the head.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'GB20'), why: 'Descends Yang, relieves occipital tension.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin to anchor Yang.', pattern: 'Liver Yang Rising' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry. Symptoms: irritability, red face, tinnitus, worse with stress.'
+          },
+          {
+            name: 'Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Moves Qi and Blood, relieves pain. "Face and mouth: seek Hegu."', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Spreads stagnant Liver Qi.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'SJ5'), why: 'Opens Shaoyang channel, moves Qi in temples.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'GB8'), why: 'Local point for temporal headache.', pattern: 'Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or slightly dark. Pulse: wiry. Symptoms: distending pain, worse with stress, sighing.'
+          },
+          {
+            name: 'Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises clear Yang to the head.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi and Blood.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood, benefits the head.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Gentle pain relief without draining.', pattern: 'Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: dull headache, dizziness, blurred vision, worse with exertion.'
+          },
+        ]
+      },
+      {
+        name: 'Nasal congestion / Sinusitis',
+        description: 'Stuffy nose, sinus pressure, runny nose',
+        patterns: [
+          {
+            name: 'Wind-Cold',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Opens nasal passages immediately.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Releases exterior, opens nose.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'GV14'), why: 'Releases exterior, expels cold.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'GB20'), why: 'Expels wind from head.', pattern: 'Wind-Cold' },
+            ],
+            diagnosticQ: 'Tongue: thin white coat. Pulse: floating tight. Symptoms: clear discharge, aversion to cold, no sweating.'
+          },
+          {
+            name: 'Wind-Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Opens nose, clears heat.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat, reduces fever.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Releases exterior heat.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'SJ5'), why: 'Clears heat from Shaoyang.', pattern: 'Wind-Heat' },
+            ],
+            diagnosticQ: 'Tongue: red tip, thin yellow coat. Pulse: floating rapid. Symptoms: thick yellow discharge, fever, sore throat.'
+          },
+          {
+            name: 'Damp-Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Local point for nose.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'ST40'), why: 'Resolves phlegm-damp.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms dampness.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat.', pattern: 'Damp-Heat' },
+            ],
+            diagnosticQ: 'Tongue: thick yellow greasy coat. Pulse: slippery rapid. Symptoms: thick sticky discharge, facial pressure, heaviness.'
+          },
+        ]
+      },
+      {
+        name: 'Toothache',
+        description: 'Tooth pain, dental pain',
+        patterns: [
+          {
+            name: 'Stomach Fire',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Master analgesic. LI meridian goes through teeth.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST6'), why: 'Local point for lower jaw.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Clears Stomach heat.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Ying-Spring point, clears Stomach fire.', pattern: 'Stomach Fire' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow coat. Pulse: rapid. Symptoms: severe burning pain, swollen gums, thirst, preference for cold drinks.'
+          },
+          {
+            name: 'Kidney Yin Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin. "Teeth are surplus of bones (Kidney)."', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Pain relief.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST6'), why: 'Local point.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Yin.', pattern: 'Kidney Yin Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: red, little coat. Pulse: thin rapid. Symptoms: dull ache, loose teeth, night sweating, tinnitus.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Digestive',
+    symptoms: [
+      {
+        name: 'Nausea / Vomiting',
+        description: 'Morning sickness, motion sickness, chemo nausea',
+        patterns: [
+          {
+            name: 'Stomach Cold',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'THE anti-nausea point. Stops rebellious Qi.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Warms the middle jiao.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Harmonizes Stomach.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Stomach Cold' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: cold sensation, relief with warmth, clear vomit.'
+          },
+          {
+            name: 'Stomach Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Anti-nausea.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Clears Stomach heat.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears Stomach fire.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat.', pattern: 'Stomach Heat' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow coat. Pulse: rapid. Symptoms: burning sensation, bitter taste, relief with cold drinks.'
+          },
+          {
+            name: 'Liver Qi Invading Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Stops nausea.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Soothes Liver Qi.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Harmonizes Stomach.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'GB34'), why: 'Regulates Liver Qi.', pattern: 'Liver Qi Invading Stomach' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry. Symptoms: nausea triggered by stress, belching, distension.'
+          },
+        ]
+      },
+      {
+        name: 'Stomach pain / Bloating',
+        description: 'Epigastric pain, fullness after eating, indigestion',
+        patterns: [
+          {
+            name: 'Cold in Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Front-Mu of Stomach. Primary point.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Warms middle jiao.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms cold-damp.', pattern: 'Cold in Stomach' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: pain relieved by warmth, worse with cold food.'
+          },
+          {
+            name: 'Damp-Heat in Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Regulates Stomach.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Transforms damp.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'SP9'), why: 'Clears damp-heat.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat.', pattern: 'Damp-Heat in Stomach' },
+            ],
+            diagnosticQ: 'Tongue: yellow greasy coat. Pulse: slippery rapid. Symptoms: burning pain, thirst, bitter taste.'
+          },
+          {
+            name: 'Food Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Promotes digestion.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Harmonizes Stomach.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Moves stagnation.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat from stagnation.', pattern: 'Food Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: thick greasy coat. Pulse: slippery. Symptoms: bloating after eating, belching, acid reflux.'
+          },
+        ]
+      },
+      {
+        name: 'Diarrhea',
+        description: 'Loose stools, chronic diarrhea',
+        patterns: [
+          {
+            name: 'Spleen Qi Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates Large Intestine.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Spleen Qi.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Strengthens Spleen.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Spleen Qi Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale, teeth marks. Pulse: weak. Symptoms: chronic, fatigue, poor appetite, loose stools.'
+          },
+          {
+            name: 'Damp-Heat in Intestines',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates intestines.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Transforms damp.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears damp-heat.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'BL25'), why: 'Back-Shu of Large Intestine.', pattern: 'Damp-Heat in Intestines' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow greasy coat. Pulse: slippery rapid. Symptoms: urgent, burning, foul odor.'
+          },
+        ]
+      },
+      {
+        name: 'Constipation',
+        description: 'Difficulty passing stool, infrequent bowel movements',
+        patterns: [
+          {
+            name: 'Heat in Intestines',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates Large Intestine.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Promotes peristalsis.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat, moistens.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'BL25'), why: 'Back-Shu of Large Intestine.', pattern: 'Heat in Intestines' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow dry coat. Pulse: rapid. Symptoms: dry hard stool, burning anus, thirst.'
+          },
+          {
+            name: 'Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates intestines.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Generates Blood.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood, moistens.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI6'), why: 'Moistens intestines.', pattern: 'Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: dry stool, dizziness, pale face, common in elderly/postpartum.'
+          },
+          {
+            name: 'Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Moves Qi in intestines.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Liver Qi.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Promotes descent.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Moves Qi.', pattern: 'Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or slightly dark. Pulse: wiry. Symptoms: bloating, distension, worse with stress.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Mental-Emotional',
+    symptoms: [
+      {
+        name: 'Insomnia',
+        description: 'Difficulty falling asleep, staying asleep, restless sleep',
+        patterns: [
+          {
+            name: 'Heart Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen. Primary point for sleep.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Generates Blood.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'Yintang'), why: 'Calms mind.', pattern: 'Heart Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: difficulty staying asleep, palpitations, poor memory.'
+          },
+          {
+            name: 'Liver Fire',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Drains Liver fire.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Calms spirit.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Liver Fire' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry rapid. Symptoms: wakes at 1-3am, irritability, vivid dreams.'
+          },
+          {
+            name: 'Kidney Yin Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Yin.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'Yintang'), why: 'Calms mind.', pattern: 'Kidney Yin Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: red, little coat. Pulse: thin rapid. Symptoms: night sweating, tinnitus, lower back pain, five-palm heat.'
+          },
+        ]
+      },
+      {
+        name: 'Anxiety / Stress',
+        description: 'Nervousness, worry, feeling overwhelmed',
+        patterns: [
+          {
+            name: 'Heart Qi Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi.', pattern: 'Heart Qi Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: weak. Symptoms: palpitations, shortness of breath, fatigue.'
+          },
+          {
+            name: 'Liver Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves stagnant Qi.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'GB34'), why: 'Soothes Liver.', pattern: 'Liver Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or red sides. Pulse: wiry. Symptoms: tension, chest tightness, sighing, emotional fluctuation.'
+          },
+        ]
+      },
+      {
+        name: 'Depression',
+        description: 'Low mood, lack of motivation, heaviness',
+        patterns: [
+          {
+            name: 'Liver Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises Yang, lifts mood.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Qi.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Liver Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal. Pulse: wiry. Symptoms: emotional constraint, chest distension, mood swings.'
+          },
+          {
+            name: 'Spleen Qi Deficiency with Phlegm',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms phlegm.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'ST40'), why: 'Resolves phlegm.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises clear Yang.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+            ],
+            diagnosticQ: 'Tongue: pale, swollen, teeth marks, greasy coat. Pulse: slippery weak. Symptoms: heaviness, foggy mind, overthinking.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Pain',
+    symptoms: [
+      {
+        name: 'Lower back pain',
+        description: 'Lumbar pain, sciatica, back strain',
+        patterns: [
+          {
+            name: 'Kidney Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu of Kidneys.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Source point of Kidneys.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'GV4'), why: 'Tonifies Yang.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Command point for back.', pattern: 'Kidney Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale or red. Pulse: deep weak. Symptoms: chronic, worse with exertion, soreness more than pain.'
+          },
+          {
+            name: 'Cold-Damp Bi',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu of Kidneys.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Opens channel.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'GV4'), why: 'Warms with moxa.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'GB30'), why: 'Opens hip channel.', pattern: 'Cold-Damp Bi' },
+            ],
+            diagnosticQ: 'Tongue: pale, white greasy coat. Pulse: slow deep. Symptoms: heavy sensation, worse in cold/damp, relief with warmth.'
+          },
+          {
+            name: 'Blood Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Command point. Bleed for acute pain.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'GV1'), why: 'Opens channel.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'SP10'), why: 'Moves Blood.', pattern: 'Blood Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: dark spots. Pulse: choppy. Symptoms: stabbing pain, fixed location, worse at night.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Women\'s Health',
+    symptoms: [
+      {
+        name: 'Menstrual pain (dysmenorrhea)',
+        description: 'Painful periods, cramps',
+        patterns: [
+          {
+            name: 'Cold in Uterus',
+            points: [
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Primary gynecology point.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'CV4'), why: 'Warms uterus.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'ST29'), why: 'Local point.', pattern: 'Cold in Uterus' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: cramping relieved by warmth, dark clots, cold extremities.'
+          },
+          {
+            name: 'Qi and Blood Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Moves Blood.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Moves Qi and Blood.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Liver Qi.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'SP8'), why: 'Xi-cleft, stops pain.', pattern: 'Qi and Blood Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: dark, purple spots. Pulse: choppy. Symptoms: sharp pain, clots, relief after passing clots.'
+          },
+        ]
+      },
+    ]
+  },
+];
+
+createApp({
+  setup() {
+    const currentTab = ref('atlas');
+    const atlasSearch = ref('');
+    const activeMeridian = ref(null);
+    const selectedPoint = ref(null);
+    const symptomSearch = ref('');
+    const selectedSymptom = ref(null);
+    const activePattern = ref(0);
+    const messages = ref([]);
+    const inputMessage = ref('');
+    const isTyping = ref(false);
+    const showSettings = ref(false);
+    const ollamaUrl = ref('');
+    const modelName = ref('qwen2.5:7b');
+    const useBackend = ref(false);
+    const systemPrompt = ref('You are an expert acupuncturist. For each query: 1) List ALL possible TCM patterns (excess/deficiency, heat/cold, qi stagnation, blood stasis, yin/yang imbalance). 2) For each pattern, give a clear recipe with point codes, locations, and rationale. 3) Label each recipe clearly: "Pattern: X". 4) Include diagnostic questions (tongue, pulse, associated symptoms) to help choose between patterns. 5) Be practical and reference specific points with location instructions.');
+    const ollamaConnected = ref(false);
+
+    const meridians = MERIDIANS;
+
+    const selectedPointImage = computed(() => {
+      if (!selectedPoint.value) return null;
+      const meridian = selectedPoint.value.meridian;
+      const m = meridian.toLowerCase();
+      if (m.includes('governing')) return ATLAS_IMAGES.governing;
+      if (m.includes('conception')) return ATLAS_IMAGES.conception;
+      if (m.includes('stomach')) return ATLAS_IMAGES.stomach;
+      if (m.includes('spleen')) return ATLAS_IMAGES.spleen;
+      if (m.includes('liver')) return ATLAS_IMAGES.liver;
+      if (m.includes('gallbladder')) return ATLAS_IMAGES.gallbladder;
+      if (m.includes('bladder')) return ATLAS_IMAGES.bladder;
+      if (m.includes('kidney')) return ATLAS_IMAGES.kidney;
+      if (m.includes('heart')) return ATLAS_IMAGES.heart;
+      if (m.includes('lung')) return ATLAS_IMAGES.lung;
+      if (m.includes('large intestine')) return ATLAS_IMAGES.largeIntestine;
+      if (m.includes('pericardium')) return ATLAS_IMAGES.pericardium;
+      if (m.includes('san jiao') || m.includes('triple')) return ATLAS_IMAGES.sanjiao;
+      if (m.includes('small intestine')) return ATLAS_IMAGES.smallIntestine;
+      if (m.includes('extra')) return ATLAS_IMAGES.extra;
+      return ATLAS_IMAGES.back;
+    });
+
+    const filteredPoints = computed(() => {
+      let pts = POINTS;
+      if (activeMeridian.value) pts = pts.filter(p => p.meridian === activeMeridian.value);
+      if (atlasSearch.value) {
+        const q = atlasSearch.value.toLowerCase();
+        pts = pts.filter(p => p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.meridian.toLowerCase().includes(q) || p.location.toLowerCase().includes(q));
+      }
+      return pts;
+    });
+
+    const filteredSymptomCategories = computed(() => {
+      if (!symptomSearch.value) return SYMPTOM_CATEGORIES;
+      const q = symptomSearch.value.toLowerCase();
+      return SYMPTOM_CATEGORIES.map(cat => ({
+        ...cat,
+        symptoms: cat.symptoms.filter(s => {
+          const nameMatch = s.name.toLowerCase().includes(q);
+          const descMatch = s.description.toLowerCase().includes(q);
+          const pointsMatch = s.points ? s.points.some(p => p.code.toLowerCase().includes(q)) : false;
+          const patternsMatch = s.patterns ? s.patterns.some(pat => pat.name.toLowerCase().includes(q) || pat.points.some(p => p.code.toLowerCase().includes(q))) : false;
+          return nameMatch || descMatch || pointsMatch || patternsMatch;
+        })
+      })).filter(cat => cat.symptoms.length > 0);
+    });
+
+    async function sendMessage() {
+      const text = inputMessage.value.trim();
+      if (!text || isTyping.value) return;
+      messages.value.push({ role: 'user', content: text });
+      inputMessage.value = '';
+      isTyping.value = true;
+      await nextTick();
+      scrollToBottom();
+
+      const apiUrl = useBackend.value ? `${ollamaUrl.value}/api/chat` : `${ollamaUrl.value}/api/chat`;
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: modelName.value,
+            messages: [
+              { role: 'system', content: systemPrompt.value },
+              ...messages.value.slice(-10).map(m => ({ role: m.role, content: m.content }))
+            ],
+            stream: true,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        ollamaConnected.value = true;
+
+        let content = '';
+        const msgIdx = messages.value.length;
+        messages.value.push({ role: 'assistant', content: '' });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(Boolean);
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.message?.content) {
+                content += data.message.content;
+                messages.value[msgIdx].content = content;
+                await nextTick();
+                scrollToBottom();
+              }
+            } catch {}
+          }
+        }
+      } catch (err) {
+        ollamaConnected.value = false;
+        messages.value.push({ role: 'assistant', content: `Connection error: ${err.message}. Check settings.` });
+      } finally {
+        isTyping.value = false;
+      }
+    }
+
+    function quickQuestion(q) {
+      inputMessage.value = q;
+      sendMessage();
+    }
+
+    function askAboutPoint(point) {
+      inputMessage.value = `Tell me about ${point.code} ${point.name}. Location, indications, needling technique.`;
+      currentTab.value = 'chat';
+      sendMessage();
+    }
+
+    function askAboutSymptom(symptom) {
+      let pointList;
+      if (symptom.patterns) {
+        const allPoints = symptom.patterns.flatMap(p => p.points);
+        const uniqueCodes = [...new Set(allPoints.map(p => p.code))];
+        pointList = uniqueCodes.join(', ');
+      } else {
+        pointList = symptom.points.map(p => `${p.code} ${p.name}`).join(', ');
+      }
+      inputMessage.value = `Give me a detailed acupuncture prescription for ${symptom.name}. Points: ${pointList}. Show all patterns with diagnosis questions (tongue, pulse, symptoms). Include location instructions and technique for each point.`;
+      currentTab.value = 'chat';
+      sendMessage();
+    }
+
+    function selectSymptom(symptom) {
+      selectedSymptom.value = symptom;
+      activePattern.value = 0;
+    }
+
+    function selectPoint(point) {
+      selectedPoint.value = point;
+    }
+
+    function openPointInAtlas(point) {
+      selectedSymptom.value = null;
+      currentTab.value = 'atlas';
+      selectedPoint.value = point;
+    }
+
+    function scrollToBottom() {
+      const el = document.querySelector('.scroll-thin:last-of-type, [ref="chatMessages"]');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function imageError(e) {
+      e.target.style.display = 'none';
+      const parent = e.target.parentElement;
+      if (parent) {
+        const existing = parent.querySelector('.img-fallback');
+        if (!existing) {
+          const fb = document.createElement('div');
+          fb.className = 'img-fallback flex items-center justify-center py-8 text-slate-500 text-sm';
+          fb.textContent = 'Image not available';
+          parent.appendChild(fb);
+        }
+      }
+    }
+
+    async function testConnection() {
+      try {
+        const endpoint = useBackend.value ? `${ollamaUrl.value}/api/tags` : `${ollamaUrl.value}/api/tags`;
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          ollamaConnected.value = true;
+          const data = await res.json();
+          if (data.models?.length) modelName.value = data.models[0].name;
+        } else {
+          ollamaConnected.value = false;
+        }
+      } catch {
+        ollamaConnected.value = false;
+      }
+    }
+
+    function formatMarkdown(text) {
+      return text
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code class="bg-slate-700 px-1 rounded text-xs">$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function toggleSettings() {
+      showSettings.value = !showSettings.value;
+    }
+
+    onMounted(() => {
+      testConnection();
+    });
+
+    return {
+      currentTab, atlasSearch, activeMeridian, selectedPoint, filteredPoints, selectedPointImage,
+      symptomSearch, selectedSymptom, activePattern, filteredSymptomCategories,
+      messages, inputMessage, isTyping, showSettings, ollamaUrl, modelName, useBackend, systemPrompt,
+      ollamaConnected, meridians,
+      sendMessage, quickQuestion, askAboutPoint, askAboutSymptom,
+      selectSymptom, selectPoint, openPointInAtlas, testConnection, formatMarkdown, toggleSettings, imageError,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>

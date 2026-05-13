@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acupuncture Atlas</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; min-height: 100vh; }
+.header { background: #1e293b; padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header h1 { color: #fbbf24; font-size: 1.3rem; }
+.header .count { color: #64748b; font-size: 0.85rem; }
+.search-bar { padding: 12px 20px; background: #1e293b/50; border-bottom: 1px solid #334155; }
+.search-bar input { width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 0.95rem; }
+.search-bar input:focus { outline: none; border-color: #fbbf24; }
+.tabs { display: flex; background: #1e293b/50; border-bottom: 1px solid #334155; }
+.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 0.9rem; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: #fbbf24; border-bottom-color: #fbbf24; }
+.tab:hover { color: #e2e8f0; }
+.content { max-width: 900px; margin: 0 auto; padding: 16px; }
+.point-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: border-color 0.2s; }
+.point-card:hover { border-color: #fbbf24/50; }
+.point-header { padding: 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.point-code { background: #fbbf24; color: #0f172a; font-weight: 800; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; min-width: 60px; text-align: center; }
+.point-name { flex: 1; font-weight: 600; font-size: 1rem; }
+.point-meridian { color: #64748b; font-size: 0.8rem; background: #334155; padding: 3px 10px; border-radius: 12px; }
+.point-detail { display: none; padding: 0 16px 16px; }
+.point-card.open .point-detail { display: block; }
+.point-card.open .point-header { border-bottom: 1px solid #334155; }
+.detail-section { margin-bottom: 14px; }
+.detail-label { color: #fbbf24; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+.detail-text { color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; }
+.indications { display: flex; flex-wrap: wrap; gap: 6px; }
+.indication-tag { background: #334155; color: #94a3b8; font-size: 0.78rem; padding: 4px 10px; border-radius: 14px; }
+.point-image { width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-bottom: 12px; background: #0f172a; }
+.chevron { color: #64748b; transition: transform 0.2s; font-size: 1.2rem; }
+.point-card.open .chevron { transform: rotate(180deg); }
+.symptom-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; }
+.symptom-card:hover { border-color: #fbbf24/50; }
+.symptom-name { font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+.symptom-desc { color: #64748b; font-size: 0.85rem; }
+.pattern-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #334155; }
+.symptom-card.open .pattern-detail { display: block; }
+.pattern-name { color: #fbbf24; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
+.pattern-point { background: #0f172a; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.pattern-point-code { color: #fbbf24; font-weight: 700; }
+.pattern-point-why { color: #94a3b8; font-size: 0.85rem; margin-top: 4px; }
+.diagnostic { color: #64748b; font-size: 0.8rem; font-style: italic; margin-top: 8px; }
+.chat-container { display: flex; flex-direction: column; height: calc(100vh - 180px); }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 0; }
+.chat-msg { margin-bottom: 12px; max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.9rem; line-height: 1.5; }
+.chat-msg.user { background: #fbbf24/20; color: #fef3c7; margin-left: auto; border-bottom-right-radius: 4px; }
+.chat-msg.assistant { background: #1e293b; color: #e2e8f0; margin-right: auto; border-bottom-left-radius: 4px; }
+.chat-input-area { display: flex; gap: 8px; padding: 12px 0; border-top: 1px solid #334155; }
+.chat-input { flex: 1; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; color: #e2e8f0; font-size: 0.9rem; }
+.chat-input:focus { outline: none; border-color: #fbbf24; }
+.chat-send { background: #fbbf24; color: #0f172a; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 600; cursor: pointer; }
+.chat-send:disabled { opacity: 0.4; }
+.settings-panel { display: none; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.settings-panel.open { display: block; }
+.setting-row { margin-bottom: 12px; }
+.setting-label { color: #94a3b8; font-size: 0.85rem; margin-bottom: 4px; }
+.setting-input { width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 10px; color: #e2e8f0; }
+.settings-toggle { background: none; border: none; color: #64748b; cursor: pointer; font-size: 1.2rem; padding: 4px; }
+.empty-chat { text-align: center; padding: 40px 20px; color: #64748b; }
+.quick-btn { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #94a3b8; font-size: 0.85rem; cursor: pointer; margin: 6px 0; width: 100%; text-align: left; }
+.quick-btn:hover { border-color: #fbbf24/50; color: #e2e8f0; }
+.typing { color: #64748b; font-size: 0.9rem; padding: 12px; }
+</style>
+</head>
+<body>
+<div class="header">
+    <h1>Acupuncture Atlas</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span class="count" id="pointCount"></span>
+        <button class="settings-toggle" id="settingsToggle">&#9881;</button>
+    </div>
+</div>
+<div class="search-bar" id="searchBar">
+    <input type="text" id="searchInput" placeholder="Search points, symptoms...">
+</div>
+<div class="tabs">
+    <div class="tab active" data-tab="atlas">Atlas</div>
+    <div class="tab" data-tab="symptoms">Symptoms</div>
+    <div class="tab" data-tab="chat">AI Chat</div>
+</div>
+<div class="content" id="content"></div>
+
+<script>
+const IMAGE_MAP = {"Governing Vessel": "atlas_images_small/p310_img0.jpeg", "Extra Point": "atlas_images_small/p314_img0.jpeg", "Large Intestine": "atlas_images_small/p113_img0.jpeg", "Pericardium": "atlas_images_small/p211_img1.jpeg", "Heart": "atlas_images_small/p213_img0.jpeg", "Conception Vessel": "atlas_images_small/p100_img1.jpeg", "Stomach": "atlas_images_small/p104_img0.jpeg", "Spleen": "atlas_images_small/p206_img0.jpeg", "Gallbladder": "atlas_images_small/p117_img0.jpeg", "Liver": "atlas_images_small/p217_img0.jpeg", "Kidney": "atlas_images_small/p210_img0.jpeg", "Bladder": "atlas_images_small/p308_img0.jpeg", "San Jiao": "atlas_images_small/p111_img0.jpeg", "Lung": "atlas_images_small/p211_img0.jpeg", "Small Intestine": "atlas_images_small/p113_img1.jpeg"};
+
+const POINTS = [{"code": "GV20", "name": "Baihui (Hundred Convergences)", "meridian": "Governing Vessel", "location": "On the top of the head, at the midpoint of the line connecting the apexes of both ears.", "location_detail": "1. Find the top of each ear where it attaches to the head. 2. Draw an imaginary line connecting these two highest points, going over the top of the head. 3. The midpoint of this line, on the midline of the head, is GV20. It is slightly depressed (a small dent).", "indications": ["Headache", "Dizziness", "Insomnia", "Anxiety", "Depression", "Prolapse", "Poor memory", "Foggy head"], "technique": "Transverse insertion 0.5-0.8 cun. Can also be moxibustion.", "notes": "One of the most important points. Meeting point of all yang meridians. Lifts yang qi."}, {"code": "Yintang", "name": "Yintang (Hall of Impression)", "meridian": "Extra Point", "location": "Midway between the medial ends of the two eyebrows, in the glabella region.", "location_detail": "1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.", "indications": ["Anxiety", "Insomnia", "Headache", "Nasal congestion", "Eye strain", "Palpitations", "Dizziness"], "technique": "Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.", "notes": "Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa."}, {"code": "LI20", "name": "Yingxiang (Welcome Fragrance)", "meridian": "Large Intestine", "location": "In the nasolabial groove, at the level of the midpoint of the lateral border of the nostril.", "location_detail": "1. Find the side (lateral border) of your nostril wing. 2. Go to the midpoint of that side. 3. The point is in the groove (nasolabial fold) right next to it, at the same level.", "indications": ["Nasal congestion", "Sinusitis", "Loss of smell", "Nosebleed", "Facial paralysis", "Runny nose"], "technique": "Oblique insertion 0.3-0.5 cun towards the nostril.", "notes": "Bilateral point (both sides). Primary point for all nasal conditions."}, {"code": "LI4", "name": "Hegu (Union Valley)", "meridian": "Large Intestine", "location": "On the dorsum of the hand, between the 1st and 2nd metacarpal bones, approximately in the middle of the 2nd metacarpal bone, close to the radial border.", "location_detail": "1. Squeeze your thumb and index finger together. 2. Find the highest point of the muscle bulge that forms. 3. That is LI4. Alternatively: slide your finger along the bone of the index finger toward the wrist, and you will feel a depression just before the V-shape between thumb and index finger bones.", "indications": ["Headache", "Toothache", "Facial pain", "Neck pain", "Fever", "Common cold", "Pain anywhere in the body", "Menstrual pain"], "technique": "Perpendicular insertion 0.5-1.0 cun. Strong sensation (De Qi) is expected.", "notes": "CONTRAINDICATED in pregnancy. Master analgesic (pain relief) point. The \"go-to\" point for any pain in the upper body, especially face and head."}, {"code": "LI11", "name": "Quchi (Pool at the Crook)", "meridian": "Large Intestine", "location": "At the lateral end of the transverse cubital crease, when the elbow is flexed, midway between LU5 and the lateral epicondyle of the humerus.", "location_detail": "1. Bend your elbow to 90 degrees. 2. You will see a crease (fold) at the outside of the elbow. 3. The point is at the outer end of this crease, in the depression between the bone prominence (lateral epicondyle) and the tendon.", "indications": ["Fever", "Skin disorders", "Sore throat", "Arm pain", "Hypertension", "Itching", "Eczema", "Urticaria"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Clears heat from the body. Very important for skin conditions and fever."}, {"code": "PC6", "name": "Neiguan (Inner Pass)", "meridian": "Pericardium", "location": "On the palmar aspect of the forearm, 2 cun above the transverse crease of the wrist, between the tendons of palmaris longus and flexor carpi radialis.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease (the first major crease at the base of the palm). 3. Measure 2 cun (about 3 finger widths of your own hand) up from the crease toward the elbow. 4. The point is between two tendons — flex your wrist slightly to see them. It is in the middle depression between them.", "indications": ["Nausea", "Vomiting", "Motion sickness", "Chest pain", "Anxiety", "Insomnia", "Heart palpitations", "Stomach pain"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "The primary anti-nausea point. Used for morning sickness, chemotherapy nausea, motion sickness. Calms the spirit."}, {"code": "HT7", "name": "Shenmen (Spirit Gate)", "meridian": "Heart", "location": "On the palmar aspect of the wrist, in the depression on the radial side of the tendon of flexor carpi ulnaris, at the ulnar end of the transverse crease.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease on the pinky-finger side (ulnar side). 3. Feel for the prominent tendon (flexor carpi ulnaris) on that side. 4. The point is in the small depression just on the thumb-side (radial side) of this tendon, right at the wrist crease.", "indications": ["Insomnia", "Anxiety", "Heart palpitations", "Poor memory", "Depression", "Mania", "Chest pain", "Irritability"], "technique": "Perpendicular insertion 0.3-0.5 cun.", "notes": "The most important point for calming the spirit (Shen). Primary point for mental-emotional disorders."}, {"code": "CV17", "name": "Danzhong (Chest Center)", "meridian": "Conception Vessel", "location": "On the anterior midline, at the level of the 4th intercostal space, in the center of the sternum.", "location_detail": "1. Find your nipples — they are approximately at the level of the 4th intercostal space. 2. Draw a horizontal line between them across the sternum (breastbone). 3. The midpoint of this line, on the center of the sternum, is CV17.", "indications": ["Chest tightness", "Shortness of breath", "Anxiety", "Palpitations", "Insufficient lactation", "Hiccups", "Depression"], "technique": "Transverse insertion upward 0.3-0.5 cun. Do not needle deeply.", "notes": "Influential point for Qi. Opens the chest, regulates qi flow. Front-Mu point of the Pericardium."}, {"code": "CV12", "name": "Zhongwan (Middle Epigastrium)", "meridian": "Conception Vessel", "location": "On the anterior midline, 4 cun above the umbilicus.", "location_detail": "1. Find your belly button (umbilicus). 2. Find the bottom of your sternum (breastbone) — the xiphoid process. 3. The midpoint between the umbilicus and the xiphoid process is CV12. Or measure 4 cun (about 5 finger widths) straight up from the navel.", "indications": ["Stomach pain", "Nausea", "Vomiting", "Acid reflux", "Bloating", "Poor appetite", "Diarrhea", "Fatigue"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Front-Mu point of the Stomach. Influential point for Fu organs. The primary point for all stomach/digestive issues."}, {"code": "CV6", "name": "Qihai (Sea of Qi)", "meridian": "Conception Vessel", "location": "On the anterior midline, 1.5 cun below the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure about 2 finger widths (1.5 cun) straight down from the center of the navel. That is CV6.", "indications": ["Fatigue", "Weakness", "Abdominal pain", "Diarrhea", "Frequent urination", "Impotence", "Menstrual disorders", "Cold in the lower abdomen"], "technique": "Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective here.", "notes": "Major tonification point. Strengthens the whole body. Often used with moxa."}, {"code": "ST25", "name": "Tianshu (Heavenly Pivot)", "meridian": "Stomach", "location": "On the abdomen, 2 cun lateral to the center of the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure 2 cun (about 3 finger widths of your own hand) to the left or right of the center of the navel. The point is on both sides.", "indications": ["Abdominal pain", "Diarrhea", "Constipation", "Bloating", "Dysentery", "Irregular menstruation"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Front-Mu point of the Large Intestine. Regulates the intestines — used for both diarrhea AND constipation."}, {"code": "ST36", "name": "Zusanli (Leg Three Li)", "meridian": "Stomach", "location": "On the anterior aspect of the leg, 3 cun below the lower border of the patella (kneecap), one finger-breadth (middle finger) lateral from the anterior crest of the tibia.", "location_detail": "1. Sit with your knee bent. 2. Find the bottom edge of your kneecap (patella). 3. Place four fingers of your hand (excluding the thumb) in a row below the kneecap — the width of four fingers is approximately 3 cun. 4. The point is just outside (lateral to) the shin bone, in a depression you can feel when you press. When you flex your foot up and down, you can feel a muscle moving — the point is in that muscle.", "indications": ["Digestive disorders", "Fatigue", "Weakness", "Immunity boost", "Nausea", "Vomiting", "Diarrhea", "Dizziness", "Insomnia", "Pain in the knee/leg"], "technique": "Perpendicular insertion 1.0-2.0 cun. Strong De Qi sensation expected.", "notes": "THE master tonification point in all of acupuncture. \"Three Li\" means it gives you energy to walk three more miles. Used for virtually any deficiency condition. Moxa here is very powerful."}, {"code": "ST40", "name": "Fenglong (Abundant Bulge)", "meridian": "Stomach", "location": "On the anterior aspect of the leg, 8 cun above the tip of the external malleolus (outer ankle), 2 finger-breadths lateral to the anterior border of the tibia.", "location_detail": "1. Find the outer ankle bone prominence. 2. Measure 8 cun (about the distance from the outer ankle to just below the knee) up the leg. 3. The point is about 2 finger widths to the outside of the shin bone, on the front-outer side of the lower leg.", "indications": ["Phlegm", "Dizziness", "Cough with phlegm", "Asthma", "Mental confusion", "Heaviness of body", "Swelling"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "The primary point for resolving phlegm in Chinese medicine. Used for \"visible\" phlegm (cough) and \"invisible\" phlegm (dizziness, mental fog, nodules)."}, {"code": "SP6", "name": "Sanyinjiao (Three Yin Intersection)", "meridian": "Spleen", "location": "On the medial aspect of the leg, 3 cun above the tip of the medial malleolus (inner ankle bone), in the depression posterior to the medial border of the tibia.", "location_detail": "1. Find the inner ankle bone (medial malleolus) — the bony bump on the inside of your ankle. 2. Place four fingers (excluding thumb) of your hand stacked above the top of this bone. 3. The point is 3 cun up (about the width of your four fingers), just behind the edge of the shin bone (tibia). You will feel a depression there.", "indications": ["Menstrual disorders", "Infertility", "Insomnia", "Digestive issues", "Urinary problems", "Edema", "Gynecological disorders", "Fatigue"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "CONTRAINDICATED in pregnancy. Meeting point of the Spleen, Liver, and Kidney meridians (all three yin meridians of the leg). Extremely versatile — one of the most commonly used points."}, {"code": "GB34", "name": "Yanglingquan (Yang Mound Spring)", "meridian": "Gallbladder", "location": "On the lateral aspect of the leg, in the depression anterior and inferior to the head of the fibula (the bony bump on the outside of the knee).", "location_detail": "1. Sit with your knee bent. 2. Feel the outside (lateral side) of your knee for a bony bump — that is the head of the fibula. 3. The point is in the depression just in front of and slightly below this bony bump. Press and you will feel a tender spot.", "indications": ["Leg pain", "Knee pain", "Sciatica", "Hip pain", "Stiffness of tendons/muscles", "Weakness of lower limbs", "Jaundice"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Influential point for tendons/muscles. The go-to point for any tendon, ligament, or muscle problem in the body."}, {"code": "GB20", "name": "Fengchi (Wind Pool)", "meridian": "Gallbladder", "location": "In the depression between the upper portion of the sternocleidomastoid muscle and the trapezius muscle, at the base of the skull.", "location_detail": "1. Find the base of your skull (occipital bone) — the hard bony ridge at the back of your head. 2. Feel for two large vertical muscles on the back of your neck (trapezius muscles). 3. The points are in the two hollows/depressions at the base of the skull, just outside these neck muscles, on both sides. They are level with the earlobes.", "indications": ["Headache", "Neck stiffness", "Neck pain", "Common cold", "Dizziness", "Blurred vision", "Tinnitus", "Hypertension"], "technique": "Oblique insertion toward the tip of the nose 0.5-0.8 cun. Do not needle too deeply.", "notes": "Bilateral point. Primary point for expelling wind (cold/flu). Excellent for tension headaches and neck problems."}, {"code": "LV3", "name": "Taichong (Great Surge)", "meridian": "Liver", "location": "On the dorsum of the foot, in the depression distal to the junction of the 1st and 2nd metatarsal bones.", "location_detail": "1. Find the space between your big toe and second toe. 2. Slide your finger back along this gap toward the ankle. 3. You will feel where the two bones (metatarsals) come together in a V-shape. 4. The point is in the depression just before this V-junction, about 1.5-2 cun back from the toe web.", "indications": ["Headache", "Dizziness", "Eye pain", "Menstrual disorders", "Stress", "Anger", "Irritability", "Hypertension", "Depression"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Source point of the Liver meridian. Spreads Liver Qi — the primary point for stress, anger, frustration, and emotional tension. Paired with LI4 (Four Gates) for maximum pain relief and stress reduction."}, {"code": "KI3", "name": "Taixi (Great Stream)", "meridian": "Kidney", "location": "In the depression between the medial malleolus (inner ankle bone) and the Achilles tendon.", "location_detail": "1. Find the inner ankle bone (medial malleolus). 2. Find the large Achilles tendon at the back of the ankle. 3. The point is in the hollow/depression between these two structures. You can feel the pulse here.", "indications": ["Lower back pain", "Tinnitus", "Hearing loss", "Insomnia", "Asthma", "Frequent urination", "Impotence", "Sore throat", "Toothache", "Weakness of legs"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Source point of the Kidney meridian. Tonifies both Kidney Yin and Kidney Yang. One of the most important tonification points."}, {"code": "BL40", "name": "Weizhong (Middle of the Bend)", "meridian": "Bladder", "location": "In the center of the transverse crease of the popliteal fossa (back of the knee), midway between the tendons of biceps femoris and semitendinosus.", "location_detail": "1. Stand or lie face down. 2. Bend your knee slightly. 3. You will see a crease (fold) at the back of the knee. 4. The point is exactly in the center of this crease, in the middle of the back of the knee.", "indications": ["Lower back pain", "Sciatica", "Leg weakness", "Knee pain", "Hip pain", "Skin disorders"], "technique": "Perpendicular insertion 1.0-1.5 cun. Can also bleed (prick to draw blood) for acute back pain.", "notes": "Command point for the back and lumbar region. \"Back and lumbar: seek Weizhong.\" Bleeding this point is classic for acute lower back strain."}, {"code": "GV14", "name": "Dazhui (Great Vertebra)", "meridian": "Governing Vessel", "location": "Below the spinous process of the 7th cervical vertebra (C7), on the posterior midline.", "location_detail": "1. Tilt your head forward (chin to chest). 2. Feel the back of your neck for the most prominent bony bump — that is C7 (the vertebra prominens). 3. The point is in the depression directly below this bony bump, on the midline.", "indications": ["Fever", "Common cold", "Neck stiffness", "Cough", "Asthma", "Epilepsy", "Night sweating"], "technique": "Oblique insertion upward 0.5-1.0 cun.", "notes": "Meeting point of all yang meridians. Clears heat, releases the exterior. Very important for fever and infections."}, {"code": "BL13", "name": "Feishu (Lung Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 3rd thoracic vertebra (T3).", "location_detail": "1. Find GV14 (below C7, the big bump at the base of the neck). 2. Count down 3 bony bumps (spinous processes) — that is T3. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right.", "indications": ["Cough", "Asthma", "Chest tightness", "Common cold", "Skin disorders", "Spontaneous sweating", "Night sweating"], "technique": "Oblique insertion 0.5-0.8 cun toward the spine. Do not needle too deeply.", "notes": "Back-Shu point of the Lungs. Primary back point for all lung/respiratory conditions."}, {"code": "BL23", "name": "Shenshu (Kidney Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 2nd lumbar vertebra (L2).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps — that is L2. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right. This is roughly at waist level.", "indications": ["Lower back pain", "Tinnitus", "Hearing loss", "Frequent urination", "Impotence", "Menstrual disorders", "Chronic fatigue", "Weakness of knees"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Back-Shu point of the Kidneys. Tonifies Kidney qi, yin, and yang. Essential for chronic deficiency conditions."}, {"code": "ST6", "name": "Jiache (Jaw Bone)", "meridian": "Stomach", "location": "One finger-breadth anterior and superior to the angle of the mandible, where the masseter muscle is prominent when the teeth are clenched.", "location_detail": "1. Clench your teeth — you will feel a muscle bulge on the side of your jaw (masseter). 2. Find the angle of your jaw (where the lower jawbone turns upward). 3. The point is about one finger width in front of and slightly above this angle, in the bulging muscle.", "indications": ["Toothache", "Facial paralysis", "Jaw pain", "TMJ disorder", "Mumps", "Lockjaw", "Facial swelling"], "technique": "Perpendicular or oblique insertion 0.3-0.5 cun.", "notes": "Bilateral point. Primary local point for jaw and tooth problems."}, {"code": "SJ5", "name": "Waiguan (Outer Pass)", "meridian": "San Jiao", "location": "On the dorsal aspect of the forearm, 2 cun above the transverse crease of the wrist, between the radius and ulna.", "location_detail": "1. Turn your forearm palm-down. 2. Find the wrist crease on the back of the hand. 3. Measure 2 cun (about 3 finger widths) up from the crease toward the elbow. 4. The point is between the two forearm bones (radius and ulna), in the center of the back of the forearm.", "indications": ["Headache", "Neck pain", "Common cold", "Fever", "Ear pain", "Tinnitus", "Pain in the arm", "Hypochondriac pain"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Connecting (Luo) point. Paired with GB20 for exterior conditions (cold/flu). Opens the Shaoyang channel."}, {"code": "SJ17", "name": "Yifeng (Wind Screen)", "meridian": "San Jiao", "location": "Posterior to the lobule of the ear, in the depression between the mandible and the mastoid process.", "location_detail": "1. Find your earlobe. 2. Behind the earlobe, feel for a bony prominence (mastoid process). 3. Between the jawbone and this bony bump is a depression — that is SJ17.", "indications": ["Tinnitus", "Deafness", "Ear pain", "Facial paralysis", "Trigeminal neuralgia", "Swelling of the cheek"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Bilateral point. Primary local point for ear disorders."}, {"code": "GB8", "name": "Shuaigu (Leading Valley)", "meridian": "Gallbladder", "location": "Directly above the apex of the ear, 1.5 cun within the hairline, on the temporal region.", "location_detail": "1. Find the very top point (apex) of your ear where it folds over. 2. Go straight up from there into the hairline. 3. About 1.5 cun (2 finger widths) up is the point.", "indications": ["Migraine", "Headache at the side of the head", "Vomiting", "Ear pain", "Dizziness"], "technique": "Transverse insertion 0.5-0.8 cun.", "notes": "Bilateral point. Excellent for temporal headaches and migraines."}, {"code": "LR14", "name": "Qimen (Cycle Gate)", "meridian": "Liver", "location": "Directly below the nipple, in the 6th intercostal space, on the midclavicular line.", "location_detail": "1. Find the nipple (approximately 4th intercostal space in men). 2. Count down two rib spaces (intercostal spaces) to the 6th. 3. On the line dropping straight down from the nipple (midclavicular line), in the space between the 6th and 7th ribs.", "indications": ["Hypochondriac pain", "Depression", "Irritability", "Vomiting", "Hiccups", "Jaundice", "Breast pain"], "technique": "Oblique or transverse insertion 0.5-0.8 cun. Do not needle deeply.", "notes": "Front-Mu point of the Liver. Regulates Liver Qi in the chest and hypochondrium."}, {"code": "ST44", "name": "Neiting (Inside Mound)", "meridian": "Stomach", "location": "On the dorsum of the foot, proximal to the 2nd toe, at the junction of the red and white skin.", "location_detail": "1. Find the 2nd toe. 2. At the base of the toe, on the top of the foot, where the skin color changes from pink to darker (red-white junction).", "indications": ["Fever", "Swollen gums", "Burning sensation in stomach", "Thirst", "Pain in foot", "Mania"], "technique": "Oblique insertion 0.3-0.5 cun.", "notes": "Ying-Spring point of Stomach. Clears heat, especially Stomach fire."}, {"code": "BL25", "name": "Dachangshu (Large Intestine Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 4th lumbar vertebra (L4).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 0 (L4 is at hip level). 3. From the lower edge of this bump, measure 1.5 cun (2 finger widths) to the left or right.", "indications": ["Diarrhea", "Constipation", "Abdominal pain", "Dysentery", "Irregular menstruation"], "technique": "Oblique insertion 0.8-1.2 cun toward the spine.", "notes": "Back-Shu point of the Large Intestine. Local point for lower jiao issues."}, {"code": "CV4", "name": "Guanyuan (Gate of Origin)", "meridian": "Conception Vessel", "location": "On the anterior midline, 3 cun below the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure 3 cun (about 4 finger widths) straight down from the navel. That is CV4.", "indications": ["Impotence", "Premature ejaculation", "Frequent urination", "Enuresis", "Irregular menstruation", "Leukorrhea", "Lower abdominal pain"], "technique": "Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective.", "notes": "Front-Mu point of the Small Intestine. Major tonification point for Kidney and Original Qi."}, {"code": "SP9", "name": "Yinlingquan (Yin Mound Spring)", "meridian": "Spleen", "location": "In the depression at the angle formed by the medial condyle of the tibia and the posterior border of the tibia.", "location_detail": "1. Find the inner (medial) side of your knee. 2. Feel for the bony bump on the inner side of the knee (medial condyle of tibia). 3. The point is in the depression at the angle formed by this bone and the shin bone, just below the knee.", "indications": ["Edema", "Abdominal distension", "Diarrhea", "Dysuria", "Menstrual disorders", "Leukorrhea"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "He-Sea point of Spleen. Resolves dampness, transforms phlegm."}, {"code": "SP8", "name": "Diji (Earth Mound)", "meridian": "Spleen", "location": "3 cun directly below SP9, on the medial border of the tibia.", "location_detail": "1. Find SP9 (Yinlingquan) on the inner knee. 2. Measure 3 cun (about 4 finger widths) straight down along the inner edge of the shin bone (tibia). The point is on the medial border of the tibia.", "indications": ["Menstrual disorders", "Dysmenorrhea", "Irregular menstruation", "Abdominal pain", "Male infertility"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Xi-Cleft point of Spleen. Important for gynecological issues."}, {"code": "KI6", "name": "Zhaohai (Shining Sea)", "meridian": "Kidney", "location": "In the depression below the tip of the medial malleolus, in the sulcus formed by the medial border of the Achilles tendon.", "location_detail": "1. Find the inner ankle bone (medial malleolus). 2. Feel for the tip (bottom) of this bone. 3. The point is in the depression just below this tip, in the groove between the ankle bone and the Achilles tendon.", "indications": ["Sore throat", "Dry cough", "Insomnia", "Irritability", "Tinnitus", "Night sweating", "Irregular menstruation"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Xi-Cleft point of Kidney. Nourishes Yin, clears deficiency heat."}, {"code": "GV4", "name": "Mingmen (Gate of Life)", "meridian": "Governing Vessel", "location": "Below the spinous process of the 2nd lumbar vertebra (L2).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps (L3, then L2). 3. The point is in the depression directly below this bump, on the midline. This is roughly at waist level.", "indications": ["Lower back pain", "Impotence", "Premature ejaculation", "Irregular menstruation", "Diarrhea", "Nocturnal emissions"], "technique": "Oblique insertion upward 0.5-1.0 cun.", "notes": "One of the most important points for tonifying Kidney Yang. \"Gate of Life.\""}, {"code": "GB30", "name": "Huantiao (Jumping Circle)", "meridian": "Gallbladder", "location": "At the junction of the lateral 1/3 and medial 2/3 of the distance between the greater trochanter and the hiatus of the sacrum.", "location_detail": "1. Find the bony bump on the outer hip (greater trochanter). 2. Find the top of the buttock crease (hiatus of sacrum). 3. Divide this distance into 3 parts. The point is at the junction of the outer 1/3 and inner 2/3. Alternatively: with the leg bent, the point is at the outer hip, directly above the buttock crease.", "indications": ["Sciatica", "Pain in hip and thigh", "Motor impairment of lower limb", "Hemiplegia", "Lumbar pain"], "technique": "Perpendicular insertion 2.0-3.0 cun toward the pubic symphysis.", "notes": "Command point for hip and sciatica. Major point for lower body pain."}, {"code": "SP10", "name": "Xuehai (Sea of Blood)", "meridian": "Spleen", "location": "On the medial aspect of the thigh, 2 cun above the mediosuperior border of the patella.", "location_detail": "1. Sit with your knee bent. 2. Find the top inner corner of the kneecap (patella). 3. Measure 2 cun (about 3 finger widths) up along the inner thigh. The point is on the inner thigh, in the bulge of the muscle (vastus medialis).", "indications": ["Menstrual disorders", "Skin disorders", "Itching", "Eczema", "Urticaria", "Cold or heat in the uterus"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Meeting point of Spleen and Chong Mai. Major point for blood-related issues and skin conditions."}, {"code": "GV1", "name": "Changqiang (Long Strong)", "meridian": "Governing Vessel", "location": "Below the tip of the coccyx, at the junction of the sacrum and coccyx.", "location_detail": "1. Feel for the tailbone (coccyx) at the very bottom of your spine. 2. The point is in the depression just below the tip of the coccyx, in the midline.", "indications": ["Diarrhea", "Hemorrhoids", "Constipation", "Lower back pain", "Prolapse of rectum", "Mental disorders"], "technique": "Oblique insertion upward 0.5-1.0 cun toward the pubic symphysis.", "notes": "Meeting point of Governing Vessel and Kidney meridian. Local point for rectal issues."}, {"code": "ST29", "name": "Guilai (Return)", "meridian": "Stomach", "location": "4 cun below the umbilicus, 2 cun lateral to the anterior midline.", "location_detail": "1. Find your belly button. 2. Measure 4 cun (about 5 finger widths) straight down. 3. From this point, measure 2 cun (3 finger widths) to the left or right. This is at the level of the top of the pubic bone.", "indications": ["Irregular menstruation", "Dysmenorrhea", "Leukorrhea", "Infertility", "Lower abdominal pain", "Hernia"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Local point for gynecological issues. \"Return\" — returns the qi to the lower jiao."}, {"code": "LU7", "name": "Lieque (Broken Sequence)", "meridian": "Lung", "location": "On the radial aspect of the forearm, 1.5 cun above the transverse crease of the wrist, in the cleft between the tendons.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease. 3. Measure 1.5 cun (2 finger widths) up from the crease toward the elbow. 4. The point is in the depression on the thumb side (radial side) of the prominent bone (styloid process of radius).", "indications": ["Cough", "Asthma", "Sore throat", "Headache", "Stiff neck", "Toothache", "Facial paralysis"], "technique": "Oblique insertion 0.2-0.3 cun.", "notes": "Connecting (Luo) point of Lung. Opens the Ren Mai. \"Release the exterior\" point for Lung issues."}, {"code": "SI3", "name": "Houxi (Back Stream)", "meridian": "Small Intestine", "location": "On the ulnar end of the transverse crease of the dorsal aspect of the wrist, in the depression on the ulnar side of the 5th metacarpal bone.", "location_detail": "1. Make a fist. 2. On the back of your hand, find the pinky side (ulnar side). 3. At the wrist crease, in the depression just beside the bony bump of the 5th metacarpal bone base. 4. The point is on the pinky-finger side of this bone.", "indications": ["Neck pain", "Headache", "Stiff neck", "Malaria", "Nasal congestion", "Mental disorders", "Night blindness"], "technique": "Perpendicular insertion 0.3-0.5 cun.", "notes": "Shu-Stream point of Small Intestine. Opens the Du Mai (Governing Vessel). Classic for neck and head issues."}, {"code": "GV27", "name": "Duiduan (Extremity of the Mouth)", "meridian": "Governing Vessel", "location": "At the tip of the central part of the upper lip.", "location_detail": "1. Lift your upper lip. 2. The point is at the center of the upper lip, right at the base where it meets the gum.", "indications": ["Wind stroke", "Mania", "Coma", "Facial paralysis", "Nasal congestion", "Swollen lips"], "technique": "Oblique insertion upward 0.1-0.2 cun.", "notes": "Meeting point of Governing Vessel and Conception Vessel."}, {"code": "EX-HN3", "name": "Yintang (Hall of Impression)", "meridian": "Extra Point", "location": "Midway between the medial ends of the two eyebrows, in the glabella region.", "location_detail": "1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.", "indications": ["Anxiety", "Insomnia", "Headache", "Nasal congestion", "Eye strain", "Palpitations", "Dizziness"], "technique": "Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.", "notes": "Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa."}];
+
+const SYMPTOMS = {
+  "Head & Face": [
+    { name: "Headache", desc: "General headache, tension headache",
+      patterns: [
+        { name: "Liver Yang Rising", points: [{code:"LV3",name:"Taichong",why:"Source point of Liver. Drains ascending Liver Yang."},{code:"GV20",name:"Baihui",why:"Subdues rising Yang, calms the head."},{code:"GB20",name:"Fengchi",why:"Descends Yang, relieves occipital tension."},{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin to anchor Yang."}], diag: "Tongue: red sides. Pulse: wiry. Irritability, red face, tinnitus, worse with stress." },
+        { name: "Qi Stagnation", points: [{code:"LI4",name:"Hegu",why:"Moves Qi and Blood. Face and mouth: seek Hegu."},{code:"LV3",name:"Taichong",why:"Spreads stagnant Liver Qi."},{code:"SJ5",name:"Waiguan",why:"Opens Shaoyang channel, moves Qi in temples."},{code:"GB8",name:"Shuaigu",why:"Local point for temporal headache."}], diag: "Tongue: normal or slightly dark. Pulse: wiry. Distending pain, worse with stress." },
+        { name: "Blood Deficiency", points: [{code:"GV20",name:"Baihui",why:"Raises clear Yang to the head."},{code:"ST36",name:"Zusanli",why:"Tonifies Qi and Blood."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood."},{code:"LI4",name:"Hegu",why:"Gentle pain relief without draining."}], diag: "Tongue: pale. Pulse: thin. Dull headache, dizziness, worse with exertion." }
+      ]
+    },
+    { name: "Nasal congestion / Sinusitis", desc: "Stuffy nose, sinus pressure",
+      patterns: [
+        { name: "Wind-Cold", points: [{code:"LI20",name:"Yingxiang",why:"Opens nasal passages."},{code:"LI4",name:"Hegu",why:"Releases exterior, opens nose."},{code:"GV14",name:"Dazhui",why:"Releases exterior, expels cold."},{code:"GB20",name:"Fengchi",why:"Expels wind from head."}], diag: "Tongue: thin white coat. Pulse: floating tight. Clear discharge, aversion to cold." },
+        { name: "Wind-Heat", points: [{code:"LI20",name:"Yingxiang",why:"Opens nose, clears heat."},{code:"LI11",name:"Quchi",why:"Clears heat, reduces fever."},{code:"LI4",name:"Hegu",why:"Releases exterior heat."},{code:"SJ5",name:"Waiguan",why:"Clears heat from Shaoyang."}], diag: "Tongue: red tip, thin yellow coat. Thick yellow discharge, fever." },
+        { name: "Damp-Heat", points: [{code:"LI20",name:"Yingxiang",why:"Local point for nose."},{code:"ST40",name:"Fenglong",why:"Resolves phlegm-damp."},{code:"SP6",name:"Sanyinjiao",why:"Transforms dampness."},{code:"LI11",name:"Quchi",why:"Clears heat."}], diag: "Tongue: thick yellow greasy coat. Thick sticky discharge, facial pressure." }
+      ]
+    },
+    { name: "Toothache", desc: "Tooth pain, dental pain",
+      patterns: [
+        { name: "Stomach Fire", points: [{code:"LI4",name:"Hegu",why:"Master analgesic. LI goes through teeth."},{code:"ST6",name:"Jiache",why:"Local point for lower jaw."},{code:"ST36",name:"Zusanli",why:"Clears Stomach heat."},{code:"ST44",name:"Neiting",why:"Ying-Spring point, clears Stomach fire."}], diag: "Tongue: red, yellow coat. Severe burning pain, swollen gums, thirst." },
+        { name: "Kidney Yin Deficiency", points: [{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin."},{code:"LI4",name:"Hegu",why:"Pain relief."},{code:"ST6",name:"Jiache",why:"Local point."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Yin."}], diag: "Tongue: red, little coat. Dull ache, loose teeth, night sweating." }
+      ]
+    }
+  ],
+  "Digestive": [
+    { name: "Nausea / Vomiting", desc: "Morning sickness, motion sickness, chemo",
+      patterns: [
+        { name: "Stomach Cold", points: [{code:"PC6",name:"Neiguan",why:"THE anti-nausea point."},{code:"CV12",name:"Zhongwan",why:"Warms the middle jiao."},{code:"ST36",name:"Zusanli",why:"Harmonizes Stomach."},{code:"CV6",name:"Qihai",why:"Warms with moxa."}], diag: "Tongue: pale, white coat. Cold sensation, relief with warmth." },
+        { name: "Stomach Heat", points: [{code:"PC6",name:"Neiguan",why:"Anti-nausea."},{code:"CV12",name:"Zhongwan",why:"Clears Stomach heat."},{code:"ST44",name:"Neiting",why:"Clears Stomach fire."},{code:"LI11",name:"Quchi",why:"Clears heat."}], diag: "Tongue: red, yellow coat. Burning sensation, bitter taste." },
+        { name: "Liver Qi Invading Stomach", points: [{code:"PC6",name:"Neiguan",why:"Stops nausea."},{code:"LV3",name:"Taichong",why:"Soothes Liver Qi."},{code:"CV12",name:"Zhongwan",why:"Harmonizes Stomach."},{code:"GB34",name:"Yanglingquan",why:"Regulates Liver Qi."}], diag: "Tongue: red sides. Nausea triggered by stress, belching." }
+      ]
+    },
+    { name: "Stomach pain / Bloating", desc: "Epigastric pain, fullness after eating",
+      patterns: [
+        { name: "Cold in Stomach", points: [{code:"CV12",name:"Zhongwan",why:"Front-Mu of Stomach."},{code:"ST36",name:"Zusanli",why:"Warms middle jiao."},{code:"CV6",name:"Qihai",why:"Warms with moxa."},{code:"SP6",name:"Sanyinjiao",why:"Transforms cold-damp."}], diag: "Tongue: pale, white coat. Pain relieved by warmth." },
+        { name: "Damp-Heat in Stomach", points: [{code:"CV12",name:"Zhongwan",why:"Regulates Stomach."},{code:"ST36",name:"Zusanli",why:"Transforms damp."},{code:"SP9",name:"Yinlingquan",why:"Clears damp-heat."},{code:"ST44",name:"Neiting",why:"Clears heat."}], diag: "Tongue: yellow greasy coat. Burning pain, thirst." },
+        { name: "Food Stagnation", points: [{code:"CV12",name:"Zhongwan",why:"Promotes digestion."},{code:"ST36",name:"Zusanli",why:"Harmonizes Stomach."},{code:"ST25",name:"Tianshu",why:"Moves stagnation."},{code:"ST44",name:"Neiting",why:"Clears heat from stagnation."}], diag: "Tongue: thick greasy coat. Bloating after eating, belching." }
+      ]
+    },
+    { name: "Diarrhea", desc: "Loose stools, chronic diarrhea",
+      patterns: [
+        { name: "Spleen Qi Deficiency", points: [{code:"ST25",name:"Tianshu",why:"Regulates Large Intestine."},{code:"ST36",name:"Zusanli",why:"Tonifies Spleen Qi."},{code:"SP6",name:"Sanyinjiao",why:"Strengthens Spleen."},{code:"CV6",name:"Qihai",why:"Warms with moxa."}], diag: "Tongue: pale, teeth marks. Chronic, fatigue, poor appetite." },
+        { name: "Damp-Heat in Intestines", points: [{code:"ST25",name:"Tianshu",why:"Regulates intestines."},{code:"ST36",name:"Zusanli",why:"Transforms damp."},{code:"ST44",name:"Neiting",why:"Clears damp-heat."},{code:"BL25",name:"Dachangshu",why:"Back-Shu of Large Intestine."}], diag: "Tongue: red, yellow greasy coat. Urgent, burning, foul odor." }
+      ]
+    },
+    { name: "Constipation", desc: "Difficulty passing stool",
+      patterns: [
+        { name: "Heat in Intestines", points: [{code:"ST25",name:"Tianshu",why:"Regulates Large Intestine."},{code:"ST36",name:"Zusanli",why:"Promotes peristalsis."},{code:"ST44",name:"Neiting",why:"Clears heat, moistens."},{code:"BL25",name:"Dachangshu",why:"Back-Shu of Large Intestine."}], diag: "Tongue: red, yellow dry coat. Dry hard stool, burning anus." },
+        { name: "Blood Deficiency", points: [{code:"ST25",name:"Tianshu",why:"Regulates intestines."},{code:"ST36",name:"Zusanli",why:"Generates Blood."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood, moistens."},{code:"KI6",name:"Zhaohai",why:"Moistens intestines."}], diag: "Tongue: pale. Dry stool, dizziness, common in elderly." },
+        { name: "Qi Stagnation", points: [{code:"ST25",name:"Tianshu",why:"Moves Qi in intestines."},{code:"LV3",name:"Taichong",why:"Moves Liver Qi."},{code:"ST36",name:"Zusanli",why:"Promotes descent."},{code:"CV6",name:"Qihai",why:"Moves Qi."}], diag: "Tongue: normal or slightly dark. Bloating, worse with stress." }
+      ]
+    }
+  ],
+  "Mental-Emotional": [
+    { name: "Insomnia", desc: "Difficulty falling asleep, staying asleep",
+      patterns: [
+        { name: "Heart Blood Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen. Primary point for sleep."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood."},{code:"ST36",name:"Zusanli",why:"Generates Blood."},{code:"Yintang",name:"Yintang",why:"Calms mind."}], diag: "Tongue: pale. Difficulty staying asleep, palpitations." },
+        { name: "Liver Fire", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"LV3",name:"Taichong",why:"Drains Liver fire."},{code:"GV20",name:"Baihui",why:"Calms spirit."},{code:"PC6",name:"Neiguan",why:"Calms heart."}], diag: "Tongue: red sides. Wakes at 1-3am, irritability, vivid dreams." },
+        { name: "Kidney Yin Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Yin."},{code:"Yintang",name:"Yintang",why:"Calms mind."}], diag: "Tongue: red, little coat. Night sweating, tinnitus, five-palm heat." }
+      ]
+    },
+    { name: "Anxiety / Stress", desc: "Nervousness, worry, feeling overwhelmed",
+      patterns: [
+        { name: "Heart Qi Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"PC6",name:"Neiguan",why:"Calms heart."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"ST36",name:"Zusanli",why:"Tonifies Qi."}], diag: "Tongue: pale. Palpitations, shortness of breath, fatigue." },
+        { name: "Liver Qi Stagnation", points: [{code:"LV3",name:"Taichong",why:"Moves stagnant Qi."},{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"GB34",name:"Yanglingquan",why:"Soothes Liver."}], diag: "Tongue: normal or red sides. Tension, chest tightness, sighing." }
+      ]
+    },
+    { name: "Depression", desc: "Low mood, lack of motivation",
+      patterns: [
+        { name: "Liver Qi Stagnation", points: [{code:"GV20",name:"Baihui",why:"Raises Yang, lifts mood."},{code:"LV3",name:"Taichong",why:"Moves Qi."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"PC6",name:"Neiguan",why:"Calms heart."}], diag: "Tongue: normal. Emotional constraint, chest distension." },
+        { name: "Spleen Qi Deficiency with Phlegm", points: [{code:"ST36",name:"Zusanli",why:"Tonifies Qi."},{code:"SP6",name:"Sanyinjiao",why:"Transforms phlegm."},{code:"ST40",name:"Fenglong",why:"Resolves phlegm."},{code:"GV20",name:"Baihui",why:"Raises clear Yang."}], diag: "Tongue: pale, swollen, teeth marks. Heaviness, foggy mind, overthinking." }
+      ]
+    }
+  ],
+  "Pain": [
+    { name: "Lower back pain", desc: "Lumbar pain, sciatica, back strain",
+      patterns: [
+        { name: "Kidney Deficiency", points: [{code:"BL23",name:"Shenshu",why:"Back-Shu of Kidneys."},{code:"KI3",name:"Taixi",why:"Source point of Kidneys."},{code:"GV4",name:"Mingmen",why:"Tonifies Yang."},{code:"BL40",name:"Weizhong",why:"Command point for back."}], diag: "Tongue: pale or red. Chronic, worse with exertion, soreness." },
+        { name: "Cold-Damp Bi", points: [{code:"BL23",name:"Shenshu",why:"Back-Shu of Kidneys."},{code:"BL40",name:"Weizhong",why:"Opens channel."},{code:"GV4",name:"Mingmen",why:"Warms with moxa."},{code:"GB30",name:"Huantiao",why:"Opens hip channel."}], diag: "Tongue: pale, white greasy coat. Heavy sensation, worse in cold/damp." },
+        { name: "Blood Stagnation", points: [{code:"BL40",name:"Weizhong",why:"Command point. Bleed for acute pain."},{code:"BL23",name:"Shenshu",why:"Back-Shu."},{code:"GV1",name:"Changqiang",why:"Opens channel."},{code:"SP10",name:"Xuehai",why:"Moves Blood."}], diag: "Tongue: dark spots. Stabbing pain, fixed location, worse at night." }
+      ]
+    }
+  ],
+  "Women's Health": [
+    { name: "Menstrual pain", desc: "Painful periods, cramps",
+      patterns: [
+        { name: "Cold in Uterus", points: [{code:"SP6",name:"Sanyinjiao",why:"Primary gynecology point."},{code:"CV4",name:"Guanyuan",why:"Warms uterus."},{code:"CV6",name:"Qihai",why:"Warms with moxa."},{code:"ST29",name:"Guilai",why:"Local point."}], diag: "Tongue: pale, white coat. Cramping relieved by warmth, dark clots." },
+        { name: "Qi and Blood Stagnation", points: [{code:"SP6",name:"Sanyinjiao",why:"Moves Blood."},{code:"LI4",name:"Hegu",why:"Moves Qi and Blood."},{code:"LV3",name:"Taichong",why:"Moves Liver Qi."},{code:"SP8",name:"Diji",why:"Xi-cleft, stops pain."}], diag: "Tongue: dark, purple spots. Sharp pain, clots, relief after passing." }
+      ]
+    }
+  ]
+};
+
+let currentTab = 'atlas';
+let searchQuery = '';
+let ollamaUrl = localStorage.getItem('ollamaUrl') || 'http://localhost:11434';
+let modelName = localStorage.getItem('modelName') || 'qwen2.5:7b';
+let chatMessages = [];
+let isTyping = false;
+
+document.getElementById('pointCount').textContent = POINTS.length + ' points';
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        document.getElementById('searchBar').style.display = currentTab === 'chat' ? 'none' : 'block';
+        render();
+    });
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    render();
+});
+
+// Settings toggle
+document.getElementById('settingsToggle').addEventListener('click', () => {
+    const panel = document.getElementById('settingsPanel');
+    panel.classList.toggle('open');
+});
+
+// Chat send
+function sendChat() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text || isTyping) return;
+    chatMessages.push({ role: 'user', content: text });
+    input.value = '';
+    isTyping = true;
+    render();
+    scrollToBottom();
+
+    fetch(ollamaUrl + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: modelName,
+            messages: [
+                { role: 'system', content: 'You are an expert acupuncturist. For each query: 1) List ALL possible TCM patterns (excess/deficiency, heat/cold, qi stagnation, blood stasis, yin/yang imbalance). 2) For each pattern, give a clear recipe with point codes, locations, and rationale. 3) Label each recipe clearly: "Pattern: X". 4) Include diagnostic questions (tongue, pulse, associated symptoms) to help choose between patterns. 5) Be practical and reference specific points with location instructions.' },
+                ...chatMessages.slice(-8).map(m => ({ role: m.role, content: m.content }))
+            ],
+            stream: true,
+        }),
+    }).then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        chatMessages.push({ role: 'assistant', content: '' });
+        isTyping = true;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let content = '';
+        function read() {
+            return reader.read().then(({ done, value }) => {
+                if (done) { isTyping = false; render(); return; }
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n').filter(Boolean);
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.message && data.message.content) {
+                            content += data.message.content;
+                            chatMessages[chatMessages.length - 1].content = content;
+                            render();
+                            scrollToBottom();
+                        }
+                    } catch (e) {}
+                }
+                return read();
+            });
+        }
+        return read();
+    }).catch(err => {
+        chatMessages.push({ role: 'assistant', content: 'Connection error: ' + err.message + '. Check settings -> Ollama URL.' });
+        isTyping = false;
+        render();
+    });
+}
+
+function scrollToBottom() {
+    setTimeout(() => {
+        const el = document.querySelector('.chat-messages');
+        if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
+}
+
+function findPoint(code) {
+    return POINTS.find(p => p.code === code);
+}
+
+function getImageUrl(point) {
+    return IMAGE_MAP[point.meridian] || '';
+}
+
+function renderAtlas() {
+    const filtered = POINTS.filter(p => {
+        if (!searchQuery) return true;
+        return p.code.toLowerCase().includes(searchQuery) || 
+               p.name.toLowerCase().includes(searchQuery) || 
+               p.meridian.toLowerCase().includes(searchQuery) ||
+               p.location.toLowerCase().includes(searchQuery);
+    });
+
+    let html = '';
+    filtered.forEach(p => {
+        const img = getImageUrl(p);
+        html += '<div class="point-card" id="point-' + p.code + '">';
+        html += '<div class="point-header" onclick="togglePoint(\'' + p.code + '\')">';
+        html += '<div class="point-code">' + p.code + '</div>';
+        html += '<div class="point-name">' + p.name + '</div>';
+        html += '<div class="point-meridian">' + p.meridian + '</div>';
+        html += '<div class="chevron">&#9660;</div>';
+        html += '</div>';
+        html += '<div class="point-detail">';
+        if (img) {
+            html += '<img class="point-image" src="' + img + '" alt="' + p.meridian + '" loading="lazy" onerror="this.style.display=\'none\'">';
+        }
+        html += '<div class="detail-section"><div class="detail-label">Location</div><div class="detail-text">' + p.location + '</div></div>';
+        if (p.location_detail) {
+            html += '<div class="detail-section"><div class="detail-label">Step by step</div><div class="detail-text">' + p.location_detail + '</div></div>';
+        }
+        if (p.technique) {
+            html += '<div class="detail-section"><div class="detail-label">Needling technique</div><div class="detail-text">' + p.technique + '</div></div>';
+        }
+        if (p.notes) {
+            html += '<div class="detail-section"><div class="detail-label">Notes</div><div class="detail-text">' + p.notes + '</div></div>';
+        }
+        html += '<div class="detail-section"><div class="detail-label">Indications</div><div class="indications">';
+        p.indications.forEach(ind => {
+            html += '<span class="indication-tag">' + ind + '</span>';
+        });
+        html += '</div></div></div></div>';
+    });
+    return html;
+}
+
+function renderSymptoms() {
+    let html = '';
+    for (const [category, symptoms] of Object.entries(SYMPTOMS)) {
+        const filtered = symptoms.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery));
+        if (filtered.length === 0) continue;
+        html += '<h3 style="color:#fbbf24;margin:20px 0 10px;font-size:1.1rem;">' + category + '</h3>';
+        filtered.forEach((s, si) => {
+            html += '<div class="symptom-card" id="symptom-' + category + '-' + si + '" onclick="toggleSymptom(\'' + category + '-' + si + '\')">';
+            html += '<div class="symptom-name">' + s.name + '</div>';
+            html += '<div class="symptom-desc">' + s.desc + '</div>';
+            html += '<div style="color:#64748b;font-size:0.75rem;margin-top:4px;">' + s.patterns.map(p => p.name).join(' &#8226; ') + '</div>';
+            html += '<div class="pattern-detail">';
+            s.patterns.forEach((pat, pi) => {
+                html += '<div class="pattern-name">Pattern: ' + pat.name + '</div>';
+                pat.points.forEach(pt => {
+                    const full = findPoint(pt.code);
+                    html += '<div class="pattern-point">';
+                    html += '<div class="pattern-point-code">' + pt.code + ' ' + (full ? full.name : pt.name) + '</div>';
+                    html += '<div class="pattern-point-why">' + pt.why + '</div>';
+                    if (full) {
+                        html += '<div style="color:#64748b;font-size:0.8rem;margin-top:4px;">Find: ' + full.location + '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '<div class="diagnostic">' + pat.diag + '</div>';
+            });
+            html += '</div></div>';
+        });
+    }
+    return html;
+}
+
+function renderChat() {
+    let html = '<div class="settings-panel" id="settingsPanel">';
+    html += '<div class="setting-row"><div class="setting-label">Ollama URL</div><input class="setting-input" id="ollamaUrlInput" value="' + ollamaUrl + '" placeholder="http://localhost:11434"></div>';
+    html += '<div class="setting-row"><div class="setting-label">Model</div><input class="setting-input" id="modelNameInput" value="' + modelName + '" placeholder="qwen2.5:7b"></div>';
+    html += '<button class="quick-btn" onclick="saveSettings()">Save Settings</button>';
+    html += '</div>';
+
+    html += '<div class="chat-container">';
+    html += '<div class="chat-messages">';
+
+    if (chatMessages.length === 0) {
+        html += '<div class="empty-chat">';
+        html += '<p style="font-size:1.1rem;margin-bottom:20px;">Ask about acupuncture points, symptoms, or treatments</p>';
+        html += '<button class="quick-btn" onclick="document.getElementById(\'chatInput\').value=\'Points for headache\';sendChat();">Points for headache?</button>';
+        html += '<button class="quick-btn" onclick="document.getElementById(\'chatInput\').value=\'Tell me about ST36 Zusanli\';sendChat();">Tell me about ST36 Zusanli</button>';
+        html += '<button class="quick-btn" onclick="document.getElementById(\'chatInput\').value=\'Recipe for stress and anxiety\';sendChat();">Recipe for stress and anxiety</button>';
+        html += '<button class="quick-btn" onclick="document.getElementById(\'chatInput\').value=\'Points for lower back pain with patterns\';sendChat();">Points for lower back pain</button>';
+        html += '</div>';
+    } else {
+        chatMessages.forEach(msg => {
+            html += '<div class="chat-msg ' + msg.role + '">' + msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</div>';
+        });
+        if (isTyping) {
+            html += '<div class="typing">Thinking...</div>';
+        }
+    }
+
+    html += '</div>';
+    html += '<div class="chat-input-area">';
+    html += '<input class="chat-input" id="chatInput" placeholder="Ask about acupuncture..." onkeydown="if(event.key===\'Enter\')sendChat()">';
+    html += '<button class="chat-send" onclick="sendChat()" id="sendBtn" ' + (isTyping ? 'disabled' : '') + '>Send</button>';
+    html += '</div></div>';
+    return html;
+}
+
+function render() {
+    const content = document.getElementById('content');
+    if (currentTab === 'atlas') {
+        content.innerHTML = renderAtlas();
+    } else if (currentTab === 'symptoms') {
+        content.innerHTML = renderSymptoms();
+    } else {
+        content.innerHTML = renderChat();
+        scrollToBottom();
+    }
+}
+
+function togglePoint(code) {
+    const el = document.getElementById('point-' + code);
+    el.classList.toggle('open');
+}
+
+function toggleSymptom(id) {
+    const el = document.getElementById('symptom-' + id);
+    el.classList.toggle('open');
+}
+
+function saveSettings() {
+    ollamaUrl = document.getElementById('ollamaUrlInput').value;
+    modelName = document.getElementById('modelNameInput').value;
+    localStorage.setItem('ollamaUrl', ollamaUrl);
+    localStorage.setItem('modelName', modelName);
+    document.getElementById('settingsPanel').classList.remove('open');
+}
+
+render();
+</script>
+</body>
+</html>

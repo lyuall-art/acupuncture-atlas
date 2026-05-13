@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acupuncture Atlas</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; min-height: 100vh; }
+.header { background: #1e293b; padding: 16px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header h1 { color: #fbbf24; font-size: 1.3rem; }
+.header .count { color: #64748b; font-size: 0.85rem; }
+.search-bar { padding: 12px 20px; background: #1e293b/50; border-bottom: 1px solid #334155; }
+.search-bar input { width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 10px 14px; color: #e2e8f0; font-size: 0.95rem; }
+.search-bar input:focus { outline: none; border-color: #fbbf24; }
+.tabs { display: flex; background: #1e293b/50; border-bottom: 1px solid #334155; }
+.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; font-size: 0.9rem; color: #94a3b8; border-bottom: 2px solid transparent; transition: all 0.2s; }
+.tab.active { color: #fbbf24; border-bottom-color: #fbbf24; }
+.tab:hover { color: #e2e8f0; }
+.recipe-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 12px; cursor: pointer; transition: border-color 0.2s; }
+.recipe-card:hover { border-color: #fbbf24/50; }
+.recipe-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.recipe-name { color: #fbbf24; font-weight: 600; font-size: 1.1rem; }
+.recipe-desc { color: #94a3b8; font-size: 0.85rem; margin-bottom: 12px; }
+.recipe-points { display: flex; flex-wrap: wrap; gap: 8px; }
+.recipe-point { background: #0f172a; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; }
+.recipe-point-code { color: #fbbf24; font-weight: 700; }
+.content { max-width: 900px; margin: 0 auto; padding: 16px; }
+.point-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; margin-bottom: 12px; overflow: hidden; transition: border-color 0.2s; }
+.point-card:hover { border-color: #fbbf24/50; }
+.point-header { padding: 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.point-code { background: #fbbf24; color: #0f172a; font-weight: 800; padding: 6px 10px; border-radius: 6px; font-size: 0.9rem; min-width: 60px; text-align: center; }
+.point-name { flex: 1; font-weight: 600; font-size: 1rem; }
+.point-meridian { color: #64748b; font-size: 0.8rem; background: #334155; padding: 3px 10px; border-radius: 12px; }
+.point-detail { display: none; padding: 0 16px 16px; }
+.point-card.open .point-detail { display: block; }
+.point-card.open .point-header { border-bottom: 1px solid #334155; }
+.detail-section { margin-bottom: 14px; }
+.detail-label { color: #fbbf24; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; margin-bottom: 6px; }
+.detail-text { color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; }
+.indications { display: flex; flex-wrap: wrap; gap: 6px; }
+.indication-tag { background: #334155; color: #94a3b8; font-size: 0.78rem; padding: 4px 10px; border-radius: 14px; }
+.point-image { width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-bottom: 12px; background: #0f172a; }
+.chevron { color: #64748b; transition: transform 0.2s; font-size: 1.2rem; }
+.point-card.open .chevron { transform: rotate(180deg); }
+.symptom-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; }
+.symptom-card:hover { border-color: #fbbf24/50; }
+.symptom-name { font-weight: 600; color: #e2e8f0; margin-bottom: 4px; }
+.symptom-desc { color: #64748b; font-size: 0.85rem; }
+.pattern-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #334155; }
+.symptom-card.open .pattern-detail { display: block; }
+.pattern-name { color: #fbbf24; font-weight: 600; font-size: 0.9rem; margin-bottom: 8px; }
+.pattern-point { background: #0f172a; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.pattern-point-code { color: #fbbf24; font-weight: 700; }
+.pattern-point-why { color: #94a3b8; font-size: 0.85rem; margin-top: 4px; }
+.diagnostic { color: #64748b; font-size: 0.8rem; font-style: italic; margin-top: 8px; }
+.chat-container { display: flex; flex-direction: column; height: calc(100vh - 180px); }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 0; }
+.chat-msg { margin-bottom: 12px; max-width: 85%; padding: 12px 16px; border-radius: 16px; font-size: 0.9rem; line-height: 1.5; }
+.chat-msg.user { background: #fbbf24/20; color: #fef3c7; margin-left: auto; border-bottom-right-radius: 4px; }
+.chat-msg.assistant { background: #1e293b; color: #e2e8f0; margin-right: auto; border-bottom-left-radius: 4px; }
+.chat-input-area { display: flex; gap: 8px; padding: 12px 0; border-top: 1px solid #334155; }
+.chat-input { flex: 1; background: #1e293b; border: 1px solid #475569; border-radius: 10px; padding: 12px; color: #e2e8f0; font-size: 0.9rem; }
+.chat-input:focus { outline: none; border-color: #fbbf24; }
+.chat-send { background: #fbbf24; color: #0f172a; border: none; border-radius: 10px; padding: 12px 18px; font-weight: 600; cursor: pointer; }
+.chat-send:disabled { opacity: 0.4; }
+.settings-panel { display: none; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.settings-panel.open { display: block; }
+.setting-row { margin-bottom: 12px; }
+.setting-label { color: #94a3b8; font-size: 0.85rem; margin-bottom: 4px; }
+.setting-input { width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 10px; color: #e2e8f0; }
+.settings-toggle { background: none; border: none; color: #64748b; cursor: pointer; font-size: 1.2rem; padding: 4px; }
+.empty-chat { text-align: center; padding: 40px 20px; color: #64748b; }
+.quick-btn { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 14px; color: #94a3b8; font-size: 0.85rem; cursor: pointer; margin: 6px 0; width: 100%; text-align: left; }
+.quick-btn:hover { border-color: #fbbf24/50; color: #e2e8f0; }
+.typing { color: #64748b; font-size: 0.9rem; padding: 12px; }
+.new-patient-btn { background: #1e293b; border: 1px solid #fbbf24; border-radius: 8px; padding: 10px 14px; color: #fbbf24; font-size: 0.85rem; cursor: pointer; margin: 6px 4px; }
+.new-patient-btn:hover { background: #fbbf24; color: #0f172a; }
+.recipe-btn { background: #0f172a; border: 1px solid #22c55e; border-radius: 8px; padding: 10px 14px; color: #22c55e; font-size: 0.85rem; cursor: pointer; margin: 6px 4px; }
+.recipe-btn:hover { background: #22c55e; color: #0f172a; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 24px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h2 { color: #fbbf24; font-size: 1.2rem; }
+.modal-close { background: none; border: none; color: #64748b; font-size: 1.5rem; cursor: pointer; }
+.modal-close:hover { color: #e2e8f0; }
+.form-group { margin-bottom: 16px; }
+.form-label { color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px; display: block; }
+.form-input, .form-textarea, .form-select { width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 10px 12px; color: #e2e8f0; font-size: 0.9rem; }
+.form-textarea { resize: vertical; min-height: 80px; }
+.form-section { background: #0f172a; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+.form-section-title { color: #fbbf24; font-size: 0.9rem; font-weight: 600; margin-bottom: 12px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.btn-primary { background: #fbbf24; color: #0f172a; border: none; border-radius: 10px; padding: 12px 24px; font-weight: 600; cursor: pointer; width: 100%; font-size: 1rem; }
+.btn-primary:hover { opacity: 0.9; }
+.btn-secondary { background: #334155; color: #e2e8f0; border: none; border-radius: 10px; padding: 12px 24px; font-weight: 600; cursor: pointer; width: 100%; font-size: 1rem; margin-top: 8px; }
+.btn-secondary:hover { background: #475569; }
+.add-point-btn { background: #22c55e; border: none; border-radius: 8px; padding: 8px 12px; color: white; font-size: 0.85rem; cursor: pointer; }
+.add-point-btn:hover { background: #16a34a; }
+.login-overlay { position: fixed; inset: 0; background: #0f172a; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.login-box { background: #1e293b; border: 1px solid #334155; border-radius: 16px; padding: 40px; width: 340px; text-align: center; }
+.login-box h1 { color: #fbbf24; font-size: 1.4rem; margin-bottom: 8px; }
+.login-box p { color: #64748b; font-size: 0.85rem; margin-bottom: 24px; }
+.login-box input { width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; padding: 12px; color: #e2e8f0; font-size: 1rem; text-align: center; outline: none; }
+.login-box input:focus { border-color: #fbbf24; }
+.login-box button { width: 100%; margin-top: 12px; background: #fbbf24; color: #0f172a; border: none; border-radius: 8px; padding: 12px; font-weight: 600; font-size: 1rem; cursor: pointer; }
+.login-box button:hover { opacity: 0.9; }
+.login-error { color: #ef4444; font-size: 0.8rem; margin-top: 8px; display: none; }
+</style>
+</head>
+<body>
+<div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+        <h1>🔒 Acupuncture Atlas</h1>
+        <p>Введите пароль для доступа</p>
+        <input type="password" id="loginPassword" placeholder="Пароль" onkeydown="if(event.key==='Enter')login()">
+        <button onclick="login()">Войти</button>
+        <div class="login-error" id="loginError">Неверный пароль</div>
+    </div>
+</div>
+<div class="header">
+    <h1>Acupuncture Atlas</h1>
+    <div style="display:flex;align-items:center;gap:12px;">
+        <span class="count" id="pointCount"></span>
+        <button class="add-point-btn" onclick="openAddPointModal()">+ Добавить точку</button>
+        <button class="settings-toggle" id="settingsToggle">&#9881;</button>
+    </div>
+</div>
+<div class="search-bar" id="searchBar">
+    <input type="text" id="searchInput" placeholder="Поиск точек, симптомов...">
+</div>
+<div class="tabs">
+    <div class="tab active" data-tab="atlas">Атлас</div>
+    <div class="tab" data-tab="symptoms">Симптомы</div>
+    <div class="tab" data-tab="recipes">Рецепты</div>
+    <div class="tab" data-tab="patients">Пациенты</div>
+    <div class="tab" data-tab="chat">Чат с AI</div>
+</div>
+<div class="chat-actions" id="chatActions" style="display:none; padding: 12px 20px; background: #1e293b/50; border-bottom: 1px solid #334155;">
+    <button class="new-patient-btn" onclick="openPatientModal()">+ Новый больной</button>
+    <button class="recipe-btn" onclick="requestRecipes()">🍵 Рецепты</button>
+</div>
+<div class="content" id="content"></div>
+
+<div class="modal-overlay" id="patientModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2 id="patientModalTitle">Карта пациента</h2>
+            <button class="modal-close" onclick="closePatientModal()">&times;</button>
+        </div>
+        <form id="patientForm" onsubmit="submitPatient(event)">
+            <div class="form-section">
+                <div class="form-section-title">Основная информация</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Имя / ID пациента</label>
+                        <input type="text" class="form-input" id="patientName" placeholder="Иван Иванов">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Возраст / Пол</label>
+                        <input type="text" class="form-input" id="patientAge" placeholder="45 лет, муж">
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">Жалобы (симптомы)</div>
+                <textarea class="form-textarea" id="patientSymptoms" placeholder="Головная боль 2 недели, давящая, в области лба. Изжога после еды. Не спит уже 3 дня..."></textarea>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">Диагностика ТКМ</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Язык (цвет, налёт)</label>
+                        <input type="text" class="form-input" id="tongue" placeholder="Красный, жёлтый налёт">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Пульс</label>
+                        <input type="text" class="form-input" id="pulse" placeholder="Напряжённый, быстрый">
+                    </div>
+                </div>
+            </div>
+            <div class="form-section">
+                <div class="form-section-title">Дополнительные признаки</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Терморегуляция</label>
+                        <select class="form-select" id="thermal">
+                            <option value="">Выберите...</option>
+                            <option value="жара">Чувство жара</option>
+                            <option value="холод">Чувство холода</option>
+                            <option value="норма">Норма</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Эмоциональное состояние</label>
+                        <select class="form-select" id="emotion">
+                            <option value="">Выберите...</option>
+                            <option value="стресс">Стресс, напряжение</option>
+                            <option value="тревога">Тревога, беспокойство</option>
+                            <option value="депрессия">Депрессия, апатия</option>
+                            <option value="гнев">Раздражительность, гнев</option>
+                            <option value="норма">Стабильное</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                    <label class="form-label">История болезни / Анамнез</label>
+                    <textarea class="form-textarea" id="history" placeholder="Хронический гастрит с 2018. Аллергия на пенициллин. Операция в 2020..."></textarea>
+                </div>
+                <div class="form-group" style="margin-top:12px;">
+                    <label class="form-label">Заметки / Примечание</label>
+                    <textarea class="form-textarea" id="patientNotes" placeholder="Дополнительные заметки для врача..." style="min-height:60px;"></textarea>
+                </div>
+            </div>
+            <div class="form-section" id="patientRecipesSection">
+                <div class="form-section-title">Назначенные рецепты</div>
+                <div id="patientRecipesList" style="margin-bottom:10px;color:#94a3b8;">Рецепты будут добавлены позже</div>
+                <button type="button" class="recipe-btn" onclick="openRecipeSelector()">+ Добавить рецепт</button>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                <button type="button" onclick="sendPatientAndAsk('диагностика')" class="quick-btn" style="flex:1;background:#fbbf24;color:#0f172a;font-weight:600;">🔍 Диагностика</button>
+                <button type="button" onclick="sendPatientAndAsk('рецепты')" class="quick-btn" style="flex:1;background:#22c55e;color:white;font-weight:600;">📋 Рецепты</button>
+                <button type="button" onclick="sendPatientAndAsk('анализ')" class="quick-btn" style="flex:1;">📊 Анализ</button>
+            </div>
+            <button type="submit" class="btn-primary">💾 Сохранить карту</button>
+            <button type="button" class="btn-secondary" onclick="closePatientModal()">Отмена</button>
+        </form>
+    </div>
+</div>
+
+<div class="modal-overlay" id="recipeModal">
+    <div class="modal" style="max-width:700px;">
+        <div class="modal-header">
+            <h2 id="recipeModalTitle">Recipe</h2>
+            <button class="modal-close" onclick="closeRecipeModal()">&times;</button>
+        </div>
+        <div id="recipeModalContent" style="color:#e2e8f0;line-height:1.6;"></div>
+        <div style="margin-top:16px;display:flex;gap:8px;">
+            <button class="btn-primary" onclick="closeRecipeModal()" style="flex:1;">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="addPointModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h2>Add New Point</h2>
+            <button class="modal-close" onclick="closeAddPointModal()">&times;</button>
+        </div>
+        <form id="addPointForm" onsubmit="addNewPoint(event)">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Code (e.g., ST36, PC6)</label>
+                    <input type="text" class="form-input" id="pointCode" placeholder="ST36" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Meridian</label>
+                    <select class="form-select" id="pointMeridian" required>
+                        <option value="">Select...</option>
+                        <option value="Lung">Lung</option>
+                        <option value="Large Intestine">Large Intestine</option>
+                        <option value="Stomach">Stomach</option>
+                        <option value="Spleen">Spleen</option>
+                        <option value="Heart">Heart</option>
+                        <option value="Small Intestine">Small Intestine</option>
+                        <option value="Pericardium">Pericardium</option>
+                        <option value="San Jiao">San Jiao</option>
+                        <option value="Gallbladder">Gallbladder</option>
+                        <option value="Liver">Liver</option>
+                        <option value="Kidney">Kidney</option>
+                        <option value="Bladder">Bladder</option>
+                        <option value="Governing Vessel">Governing Vessel</option>
+                        <option value="Conception Vessel">Conception Vessel</option>
+                        <option value="Extra Point">Extra Point</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Name (Chinese + English)</label>
+                <input type="text" class="form-input" id="pointName" placeholder="Zusanli (Leg Three Li)" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Location (brief)</label>
+                <input type="text" class="form-input" id="pointLocation" placeholder="3 cun below knee, one finger from tibia" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Location Detail (step by step)</label>
+                <textarea class="form-textarea" id="pointLocationDetail" placeholder="1. Find ST35...\n2. Measure 3 cun down...\n3. Locate lateral to tibia..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Needling Technique</label>
+                <input type="text" class="form-input" id="pointTechnique" placeholder="Perpendicular 1-1.5 cun">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Notes</label>
+                <textarea class="form-textarea" id="pointNotes" placeholder="Important functions, contraindications..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Indications (comma separated)</label>
+                <input type="text" class="form-input" id="pointIndications" placeholder="Digestive disorders, fatigue, immunity">
+            </div>
+            <button type="submit" class="btn-primary">Добавить точку</button>
+            <button type="button" class="btn-secondary" onclick="closeAddPointModal()">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script>
+const IMAGE_MAP = {"Governing Vessel": "/atlas_images_small/p310_img0.jpeg", "Extra Point": "/atlas_images_small/p314_img0.jpeg", "Large Intestine": "/atlas_images_small/p113_img0.jpeg", "Pericardium": "/atlas_images_small/p211_img1.jpeg", "Heart": "/atlas_images_small/p213_img0.jpeg", "Conception Vessel": "/atlas_images_small/p100_img1.jpeg", "Stomach": "/atlas_images_small/p104_img0.jpeg", "Spleen": "/atlas_images_small/p206_img0.jpeg", "Gallbladder": "/atlas_images_small/p117_img0.jpeg", "Liver": "/atlas_images_small/p217_img0.jpeg", "Kidney": "/atlas_images_small/p210_img0.jpeg", "Bladder": "/atlas_images_small/p308_img0.jpeg", "San Jiao": "/atlas_images_small/p111_img0.jpeg", "Lung": "/atlas_images_small/p211_img0.jpeg", "Small Intestine": "/atlas_images_small/p113_img1.jpeg"};
+
+const POINTS = [{"code": "GV20", "name": "Baihui (Hundred Convergences)", "meridian": "Governing Vessel", "location": "On the top of the head, at the midpoint of the line connecting the apexes of both ears.", "location_detail": "1. Find the top of each ear where it attaches to the head. 2. Draw an imaginary line connecting these two highest points, going over the top of the head. 3. The midpoint of this line, on the midline of the head, is GV20. It is slightly depressed (a small dent).", "indications": ["Headache", "Dizziness", "Insomnia", "Anxiety", "Depression", "Prolapse", "Poor memory", "Foggy head"], "technique": "Transverse insertion 0.5-0.8 cun. Can also be moxibustion.", "notes": "One of the most important points. Meeting point of all yang meridians. Lifts yang qi."}, {"code": "Yintang", "name": "Yintang (Hall of Impression)", "meridian": "Extra Point", "location": "Midway between the medial ends of the two eyebrows, in the glabella region.", "location_detail": "1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.", "indications": ["Anxiety", "Insomnia", "Headache", "Nasal congestion", "Eye strain", "Palpitations", "Dizziness"], "technique": "Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.", "notes": "Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa."}, {"code": "LI20", "name": "Yingxiang (Welcome Fragrance)", "meridian": "Large Intestine", "location": "In the nasolabial groove, at the level of the midpoint of the lateral border of the nostril.", "location_detail": "1. Find the side (lateral border) of your nostril wing. 2. Go to the midpoint of that side. 3. The point is in the groove (nasolabial fold) right next to it, at the same level.", "indications": ["Nasal congestion", "Sinusitis", "Loss of smell", "Nosebleed", "Facial paralysis", "Runny nose"], "technique": "Oblique insertion 0.3-0.5 cun towards the nostril.", "notes": "Bilateral point (both sides). Primary point for all nasal conditions."}, {"code": "LI4", "name": "Hegu (Union Valley)", "meridian": "Large Intestine", "location": "On the dorsum of the hand, between the 1st and 2nd metacarpal bones, approximately in the middle of the 2nd metacarpal bone, close to the radial border.", "location_detail": "1. Squeeze your thumb and index finger together. 2. Find the highest point of the muscle bulge that forms. 3. That is LI4. Alternatively: slide your finger along the bone of the index finger toward the wrist, and you will feel a depression just before the V-shape between thumb and index finger bones.", "indications": ["Headache", "Toothache", "Facial pain", "Neck pain", "Fever", "Common cold", "Pain anywhere in the body", "Menstrual pain"], "technique": "Perpendicular insertion 0.5-1.0 cun. Strong sensation (De Qi) is expected.", "notes": "CONTRAINDICATED in pregnancy. Master analgesic (pain relief) point. The \"go-to\" point for any pain in the upper body, especially face and head."}, {"code": "LI11", "name": "Quchi (Pool at the Crook)", "meridian": "Large Intestine", "location": "At the lateral end of the transverse cubital crease, when the elbow is flexed, midway between LU5 and the lateral epicondyle of the humerus.", "location_detail": "1. Bend your elbow to 90 degrees. 2. You will see a crease (fold) at the outside of the elbow. 3. The point is at the outer end of this crease, in the depression between the bone prominence (lateral epicondyle) and the tendon.", "indications": ["Fever", "Skin disorders", "Sore throat", "Arm pain", "Hypertension", "Itching", "Eczema", "Urticaria"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Clears heat from the body. Very important for skin conditions and fever."}, {"code": "PC6", "name": "Neiguan (Inner Pass)", "meridian": "Pericardium", "location": "On the palmar aspect of the forearm, 2 cun above the transverse crease of the wrist, between the tendons of palmaris longus and flexor carpi radialis.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease (the first major crease at the base of the palm). 3. Measure 2 cun (about 3 finger widths of your own hand) up from the crease toward the elbow. 4. The point is between two tendons — flex your wrist slightly to see them. It is in the middle depression between them.", "indications": ["Nausea", "Vomiting", "Motion sickness", "Chest pain", "Anxiety", "Insomnia", "Heart palpitations", "Stomach pain"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "The primary anti-nausea point. Used for morning sickness, chemotherapy nausea, motion sickness. Calms the spirit."}, {"code": "HT7", "name": "Shenmen (Spirit Gate)", "meridian": "Heart", "location": "On the palmar aspect of the wrist, in the depression on the radial side of the tendon of flexor carpi ulnaris, at the ulnar end of the transverse crease.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease on the pinky-finger side (ulnar side). 3. Feel for the prominent tendon (flexor carpi ulnaris) on that side. 4. The point is in the small depression just on the thumb-side (radial side) of this tendon, right at the wrist crease.", "indications": ["Insomnia", "Anxiety", "Heart palpitations", "Poor memory", "Depression", "Mania", "Chest pain", "Irritability"], "technique": "Perpendicular insertion 0.3-0.5 cun.", "notes": "The most important point for calming the spirit (Shen). Primary point for mental-emotional disorders."}, {"code": "CV17", "name": "Danzhong (Chest Center)", "meridian": "Conception Vessel", "location": "On the anterior midline, at the level of the 4th intercostal space, in the center of the sternum.", "location_detail": "1. Find your nipples — they are approximately at the level of the 4th intercostal space. 2. Draw a horizontal line between them across the sternum (breastbone). 3. The midpoint of this line, on the center of the sternum, is CV17.", "indications": ["Chest tightness", "Shortness of breath", "Anxiety", "Palpitations", "Insufficient lactation", "Hiccups", "Depression"], "technique": "Transverse insertion upward 0.3-0.5 cun. Do not needle deeply.", "notes": "Influential point for Qi. Opens the chest, regulates qi flow. Front-Mu point of the Pericardium."}, {"code": "CV12", "name": "Zhongwan (Middle Epigastrium)", "meridian": "Conception Vessel", "location": "On the anterior midline, 4 cun above the umbilicus.", "location_detail": "1. Find your belly button (umbilicus). 2. Find the bottom of your sternum (breastbone) — the xiphoid process. 3. The midpoint between the umbilicus and the xiphoid process is CV12. Or measure 4 cun (about 5 finger widths) straight up from the navel.", "indications": ["Stomach pain", "Nausea", "Vomiting", "Acid reflux", "Bloating", "Poor appetite", "Diarrhea", "Fatigue"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Front-Mu point of the Stomach. Influential point for Fu organs. The primary point for all stomach/digestive issues."}, {"code": "CV6", "name": "Qihai (Sea of Qi)", "meridian": "Conception Vessel", "location": "On the anterior midline, 1.5 cun below the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure about 2 finger widths (1.5 cun) straight down from the center of the navel. That is CV6.", "indications": ["Fatigue", "Weakness", "Abdominal pain", "Diarrhea", "Frequent urination", "Impotence", "Menstrual disorders", "Cold in the lower abdomen"], "technique": "Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective here.", "notes": "Major tonification point. Strengthens the whole body. Often used with moxa."}, {"code": "ST25", "name": "Tianshu (Heavenly Pivot)", "meridian": "Stomach", "location": "On the abdomen, 2 cun lateral to the center of the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure 2 cun (about 3 finger widths of your own hand) to the left or right of the center of the navel. The point is on both sides.", "indications": ["Abdominal pain", "Diarrhea", "Constipation", "Bloating", "Dysentery", "Irregular menstruation"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Front-Mu point of the Large Intestine. Regulates the intestines — used for both diarrhea AND constipation."}, {"code": "ST36", "name": "Zusanli (Leg Three Li)", "meridian": "Stomach", "location": "On the anterior aspect of the leg, 3 cun below the lower border of the patella (kneecap), one finger-breadth (middle finger) lateral from the anterior crest of the tibia.", "location_detail": "1. Sit with your knee bent. 2. Find the bottom edge of your kneecap (patella). 3. Place four fingers of your hand (excluding the thumb) in a row below the kneecap — the width of four fingers is approximately 3 cun. 4. The point is just outside (lateral to) the shin bone, in a depression you can feel when you press. When you flex your foot up and down, you can feel a muscle moving — the point is in that muscle.", "indications": ["Digestive disorders", "Fatigue", "Weakness", "Immunity boost", "Nausea", "Vomiting", "Diarrhea", "Dizziness", "Insomnia", "Pain in the knee/leg"], "technique": "Perpendicular insertion 1.0-2.0 cun. Strong De Qi sensation expected.", "notes": "THE master tonification point in all of acupuncture. \"Three Li\" means it gives you energy to walk three more miles. Used for virtually any deficiency condition. Moxa here is very powerful."}, {"code": "ST40", "name": "Fenglong (Abundant Bulge)", "meridian": "Stomach", "location": "On the anterior aspect of the leg, 8 cun above the tip of the external malleolus (outer ankle), 2 finger-breadths lateral to the anterior border of the tibia.", "location_detail": "1. Find the outer ankle bone prominence. 2. Measure 8 cun (about the distance from the outer ankle to just below the knee) up the leg. 3. The point is about 2 finger widths to the outside of the shin bone, on the front-outer side of the lower leg.", "indications": ["Phlegm", "Dizziness", "Cough with phlegm", "Asthma", "Mental confusion", "Heaviness of body", "Swelling"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "The primary point for resolving phlegm in Chinese medicine. Used for \"visible\" phlegm (cough) and \"invisible\" phlegm (dizziness, mental fog, nodules)."}, {"code": "SP6", "name": "Sanyinjiao (Three Yin Intersection)", "meridian": "Spleen", "location": "On the medial aspect of the leg, 3 cun above the tip of the medial malleolus (inner ankle bone), in the depression posterior to the medial border of the tibia.", "location_detail": "1. Find the inner ankle bone (medial malleolus) — the bony bump on the inside of your ankle. 2. Place four fingers (excluding thumb) of your hand stacked above the top of this bone. 3. The point is 3 cun up (about the width of your four fingers), just behind the edge of the shin bone (tibia). You will feel a depression there.", "indications": ["Menstrual disorders", "Infertility", "Insomnia", "Digestive issues", "Urinary problems", "Edema", "Gynecological disorders", "Fatigue"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "CONTRAINDICATED in pregnancy. Meeting point of the Spleen, Liver, and Kidney meridians (all three yin meridians of the leg). Extremely versatile — one of the most commonly used points."}, {"code": "GB34", "name": "Yanglingquan (Yang Mound Spring)", "meridian": "Gallbladder", "location": "On the lateral aspect of the leg, in the depression anterior and inferior to the head of the fibula (the bony bump on the outside of the knee).", "location_detail": "1. Sit with your knee bent. 2. Feel the outside (lateral side) of your knee for a bony bump — that is the head of the fibula. 3. The point is in the depression just in front of and slightly below this bony bump. Press and you will feel a tender spot.", "indications": ["Leg pain", "Knee pain", "Sciatica", "Hip pain", "Stiffness of tendons/muscles", "Weakness of lower limbs", "Jaundice"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Influential point for tendons/muscles. The go-to point for any tendon, ligament, or muscle problem in the body."}, {"code": "GB20", "name": "Fengchi (Wind Pool)", "meridian": "Gallbladder", "location": "In the depression between the upper portion of the sternocleidomastoid muscle and the trapezius muscle, at the base of the skull.", "location_detail": "1. Find the base of your skull (occipital bone) — the hard bony ridge at the back of your head. 2. Feel for two large vertical muscles on the back of your neck (trapezius muscles). 3. The points are in the two hollows/depressions at the base of the skull, just outside these neck muscles, on both sides. They are level with the earlobes.", "indications": ["Headache", "Neck stiffness", "Neck pain", "Common cold", "Dizziness", "Blurred vision", "Tinnitus", "Hypertension"], "technique": "Oblique insertion toward the tip of the nose 0.5-0.8 cun. Do not needle too deeply.", "notes": "Bilateral point. Primary point for expelling wind (cold/flu). Excellent for tension headaches and neck problems."}, {"code": "LV3", "name": "Taichong (Great Surge)", "meridian": "Liver", "location": "On the dorsum of the foot, in the depression distal to the junction of the 1st and 2nd metatarsal bones.", "location_detail": "1. Find the space between your big toe and second toe. 2. Slide your finger back along this gap toward the ankle. 3. You will feel where the two bones (metatarsals) come together in a V-shape. 4. The point is in the depression just before this V-junction, about 1.5-2 cun back from the toe web.", "indications": ["Headache", "Dizziness", "Eye pain", "Menstrual disorders", "Stress", "Anger", "Irritability", "Hypertension", "Depression"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Source point of the Liver meridian. Spreads Liver Qi — the primary point for stress, anger, frustration, and emotional tension. Paired with LI4 (Four Gates) for maximum pain relief and stress reduction."}, {"code": "KI3", "name": "Taixi (Great Stream)", "meridian": "Kidney", "location": "In the depression between the medial malleolus (inner ankle bone) and the Achilles tendon.", "location_detail": "1. Find the inner ankle bone (medial malleolus). 2. Find the large Achilles tendon at the back of the ankle. 3. The point is in the hollow/depression between these two structures. You can feel the pulse here.", "indications": ["Lower back pain", "Tinnitus", "Hearing loss", "Insomnia", "Asthma", "Frequent urination", "Impotence", "Sore throat", "Toothache", "Weakness of legs"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Source point of the Kidney meridian. Tonifies both Kidney Yin and Kidney Yang. One of the most important tonification points."}, {"code": "BL40", "name": "Weizhong (Middle of the Bend)", "meridian": "Bladder", "location": "In the center of the transverse crease of the popliteal fossa (back of the knee), midway between the tendons of biceps femoris and semitendinosus.", "location_detail": "1. Stand or lie face down. 2. Bend your knee slightly. 3. You will see a crease (fold) at the back of the knee. 4. The point is exactly in the center of this crease, in the middle of the back of the knee.", "indications": ["Lower back pain", "Sciatica", "Leg weakness", "Knee pain", "Hip pain", "Skin disorders"], "technique": "Perpendicular insertion 1.0-1.5 cun. Can also bleed (prick to draw blood) for acute back pain.", "notes": "Command point for the back and lumbar region. \"Back and lumbar: seek Weizhong.\" Bleeding this point is classic for acute lower back strain."}, {"code": "GV14", "name": "Dazhui (Great Vertebra)", "meridian": "Governing Vessel", "location": "Below the spinous process of the 7th cervical vertebra (C7), on the posterior midline.", "location_detail": "1. Tilt your head forward (chin to chest). 2. Feel the back of your neck for the most prominent bony bump — that is C7 (the vertebra prominens). 3. The point is in the depression directly below this bony bump, on the midline.", "indications": ["Fever", "Common cold", "Neck stiffness", "Cough", "Asthma", "Epilepsy", "Night sweating"], "technique": "Oblique insertion upward 0.5-1.0 cun.", "notes": "Meeting point of all yang meridians. Clears heat, releases the exterior. Very important for fever and infections."}, {"code": "BL13", "name": "Feishu (Lung Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 3rd thoracic vertebra (T3).", "location_detail": "1. Find GV14 (below C7, the big bump at the base of the neck). 2. Count down 3 bony bumps (spinous processes) — that is T3. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right.", "indications": ["Cough", "Asthma", "Chest tightness", "Common cold", "Skin disorders", "Spontaneous sweating", "Night sweating"], "technique": "Oblique insertion 0.5-0.8 cun toward the spine. Do not needle too deeply.", "notes": "Back-Shu point of the Lungs. Primary back point for all lung/respiratory conditions."}, {"code": "BL23", "name": "Shenshu (Kidney Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 2nd lumbar vertebra (L2).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps — that is L2. 3. From the lower edge of this bump, measure 1.5 cun (about 2 finger widths) to the left or right. This is roughly at waist level.", "indications": ["Lower back pain", "Tinnitus", "Hearing loss", "Frequent urination", "Impotence", "Menstrual disorders", "Chronic fatigue", "Weakness of knees"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Back-Shu point of the Kidneys. Tonifies Kidney qi, yin, and yang. Essential for chronic deficiency conditions."}, {"code": "ST6", "name": "Jiache (Jaw Bone)", "meridian": "Stomach", "location": "One finger-breadth anterior and superior to the angle of the mandible, where the masseter muscle is prominent when the teeth are clenched.", "location_detail": "1. Clench your teeth — you will feel a muscle bulge on the side of your jaw (masseter). 2. Find the angle of your jaw (where the lower jawbone turns upward). 3. The point is about one finger width in front of and slightly above this angle, in the bulging muscle.", "indications": ["Toothache", "Facial paralysis", "Jaw pain", "TMJ disorder", "Mumps", "Lockjaw", "Facial swelling"], "technique": "Perpendicular or oblique insertion 0.3-0.5 cun.", "notes": "Bilateral point. Primary local point for jaw and tooth problems."}, {"code": "SJ5", "name": "Waiguan (Outer Pass)", "meridian": "San Jiao", "location": "On the dorsal aspect of the forearm, 2 cun above the transverse crease of the wrist, between the radius and ulna.", "location_detail": "1. Turn your forearm palm-down. 2. Find the wrist crease on the back of the hand. 3. Measure 2 cun (about 3 finger widths) up from the crease toward the elbow. 4. The point is between the two forearm bones (radius and ulna), in the center of the back of the forearm.", "indications": ["Headache", "Neck pain", "Common cold", "Fever", "Ear pain", "Tinnitus", "Pain in the arm", "Hypochondriac pain"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Connecting (Luo) point. Paired with GB20 for exterior conditions (cold/flu). Opens the Shaoyang channel."}, {"code": "SJ17", "name": "Yifeng (Wind Screen)", "meridian": "San Jiao", "location": "Posterior to the lobule of the ear, in the depression between the mandible and the mastoid process.", "location_detail": "1. Find your earlobe. 2. Behind the earlobe, feel for a bony prominence (mastoid process). 3. Between the jawbone and this bony bump is a depression — that is SJ17.", "indications": ["Tinnitus", "Deafness", "Ear pain", "Facial paralysis", "Trigeminal neuralgia", "Swelling of the cheek"], "technique": "Perpendicular insertion 0.5-1.0 cun.", "notes": "Bilateral point. Primary local point for ear disorders."}, {"code": "GB8", "name": "Shuaigu (Leading Valley)", "meridian": "Gallbladder", "location": "Directly above the apex of the ear, 1.5 cun within the hairline, on the temporal region.", "location_detail": "1. Find the very top point (apex) of your ear where it folds over. 2. Go straight up from there into the hairline. 3. About 1.5 cun (2 finger widths) up is the point.", "indications": ["Migraine", "Headache at the side of the head", "Vomiting", "Ear pain", "Dizziness"], "technique": "Transverse insertion 0.5-0.8 cun.", "notes": "Bilateral point. Excellent for temporal headaches and migraines."}, {"code": "LR14", "name": "Qimen (Cycle Gate)", "meridian": "Liver", "location": "Directly below the nipple, in the 6th intercostal space, on the midclavicular line.", "location_detail": "1. Find the nipple (approximately 4th intercostal space in men). 2. Count down two rib spaces (intercostal spaces) to the 6th. 3. On the line dropping straight down from the nipple (midclavicular line), in the space between the 6th and 7th ribs.", "indications": ["Hypochondriac pain", "Depression", "Irritability", "Vomiting", "Hiccups", "Jaundice", "Breast pain"], "technique": "Oblique or transverse insertion 0.5-0.8 cun. Do not needle deeply.", "notes": "Front-Mu point of the Liver. Regulates Liver Qi in the chest and hypochondrium."}, {"code": "ST44", "name": "Neiting (Inside Mound)", "meridian": "Stomach", "location": "On the dorsum of the foot, proximal to the 2nd toe, at the junction of the red and white skin.", "location_detail": "1. Find the 2nd toe. 2. At the base of the toe, on the top of the foot, where the skin color changes from pink to darker (red-white junction).", "indications": ["Fever", "Swollen gums", "Burning sensation in stomach", "Thirst", "Pain in foot", "Mania"], "technique": "Oblique insertion 0.3-0.5 cun.", "notes": "Ying-Spring point of Stomach. Clears heat, especially Stomach fire."}, {"code": "BL25", "name": "Dachangshu (Large Intestine Shu)", "meridian": "Bladder", "location": "1.5 cun lateral to the lower border of the spinous process of the 4th lumbar vertebra (L4).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 0 (L4 is at hip level). 3. From the lower edge of this bump, measure 1.5 cun (2 finger widths) to the left or right.", "indications": ["Diarrhea", "Constipation", "Abdominal pain", "Dysentery", "Irregular menstruation"], "technique": "Oblique insertion 0.8-1.2 cun toward the spine.", "notes": "Back-Shu point of the Large Intestine. Local point for lower jiao issues."}, {"code": "CV4", "name": "Guanyuan (Gate of Origin)", "meridian": "Conception Vessel", "location": "On the anterior midline, 3 cun below the umbilicus.", "location_detail": "1. Find your belly button. 2. Measure 3 cun (about 4 finger widths) straight down from the navel. That is CV4.", "indications": ["Impotence", "Premature ejaculation", "Frequent urination", "Enuresis", "Irregular menstruation", "Leukorrhea", "Lower abdominal pain"], "technique": "Perpendicular insertion 1.0-1.5 cun. Moxibustion is very effective.", "notes": "Front-Mu point of the Small Intestine. Major tonification point for Kidney and Original Qi."}, {"code": "SP9", "name": "Yinlingquan (Yin Mound Spring)", "meridian": "Spleen", "location": "In the depression at the angle formed by the medial condyle of the tibia and the posterior border of the tibia.", "location_detail": "1. Find the inner (medial) side of your knee. 2. Feel for the bony bump on the inner side of the knee (medial condyle of tibia). 3. The point is in the depression at the angle formed by this bone and the shin bone, just below the knee.", "indications": ["Edema", "Abdominal distension", "Diarrhea", "Dysuria", "Menstrual disorders", "Leukorrhea"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "He-Sea point of Spleen. Resolves dampness, transforms phlegm."}, {"code": "SP8", "name": "Diji (Earth Mound)", "meridian": "Spleen", "location": "3 cun directly below SP9, on the medial border of the tibia.", "location_detail": "1. Find SP9 (Yinlingquan) on the inner knee. 2. Measure 3 cun (about 4 finger widths) straight down along the inner edge of the shin bone (tibia). The point is on the medial border of the tibia.", "indications": ["Menstrual disorders", "Dysmenorrhea", "Irregular menstruation", "Abdominal pain", "Male infertility"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Xi-Cleft point of Spleen. Important for gynecological issues."}, {"code": "KI6", "name": "Zhaohai (Shining Sea)", "meridian": "Kidney", "location": "In the depression below the tip of the medial malleolus, in the sulcus formed by the medial border of the Achilles tendon.", "location_detail": "1. Find the inner ankle bone (medial malleolus). 2. Feel for the tip (bottom) of this bone. 3. The point is in the depression just below this tip, in the groove between the ankle bone and the Achilles tendon.", "indications": ["Sore throat", "Dry cough", "Insomnia", "Irritability", "Tinnitus", "Night sweating", "Irregular menstruation"], "technique": "Perpendicular insertion 0.5-0.8 cun.", "notes": "Xi-Cleft point of Kidney. Nourishes Yin, clears deficiency heat."}, {"code": "GV4", "name": "Mingmen (Gate of Life)", "meridian": "Governing Vessel", "location": "Below the spinous process of the 2nd lumbar vertebra (L2).", "location_detail": "1. Find the top of your hip bones (iliac crests) — they are at the level of L4. 2. Count up 2 bony bumps (L3, then L2). 3. The point is in the depression directly below this bump, on the midline. This is roughly at waist level.", "indications": ["Lower back pain", "Impotence", "Premature ejaculation", "Irregular menstruation", "Diarrhea", "Nocturnal emissions"], "technique": "Oblique insertion upward 0.5-1.0 cun.", "notes": "One of the most important points for tonifying Kidney Yang. \"Gate of Life.\""}, {"code": "GB30", "name": "Huantiao (Jumping Circle)", "meridian": "Gallbladder", "location": "At the junction of the lateral 1/3 and medial 2/3 of the distance between the greater trochanter and the hiatus of the sacrum.", "location_detail": "1. Find the bony bump on the outer hip (greater trochanter). 2. Find the top of the buttock crease (hiatus of sacrum). 3. Divide this distance into 3 parts. The point is at the junction of the outer 1/3 and inner 2/3. Alternatively: with the leg bent, the point is at the outer hip, directly above the buttock crease.", "indications": ["Sciatica", "Pain in hip and thigh", "Motor impairment of lower limb", "Hemiplegia", "Lumbar pain"], "technique": "Perpendicular insertion 2.0-3.0 cun toward the pubic symphysis.", "notes": "Command point for hip and sciatica. Major point for lower body pain."}, {"code": "SP10", "name": "Xuehai (Sea of Blood)", "meridian": "Spleen", "location": "On the medial aspect of the thigh, 2 cun above the mediosuperior border of the patella.", "location_detail": "1. Sit with your knee bent. 2. Find the top inner corner of the kneecap (patella). 3. Measure 2 cun (about 3 finger widths) up along the inner thigh. The point is on the inner thigh, in the bulge of the muscle (vastus medialis).", "indications": ["Menstrual disorders", "Skin disorders", "Itching", "Eczema", "Urticaria", "Cold or heat in the uterus"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Meeting point of Spleen and Chong Mai. Major point for blood-related issues and skin conditions."}, {"code": "GV1", "name": "Changqiang (Long Strong)", "meridian": "Governing Vessel", "location": "Below the tip of the coccyx, at the junction of the sacrum and coccyx.", "location_detail": "1. Feel for the tailbone (coccyx) at the very bottom of your spine. 2. The point is in the depression just below the tip of the coccyx, in the midline.", "indications": ["Diarrhea", "Hemorrhoids", "Constipation", "Lower back pain", "Prolapse of rectum", "Mental disorders"], "technique": "Oblique insertion upward 0.5-1.0 cun toward the pubic symphysis.", "notes": "Meeting point of Governing Vessel and Kidney meridian. Local point for rectal issues."}, {"code": "ST29", "name": "Guilai (Return)", "meridian": "Stomach", "location": "4 cun below the umbilicus, 2 cun lateral to the anterior midline.", "location_detail": "1. Find your belly button. 2. Measure 4 cun (about 5 finger widths) straight down. 3. From this point, measure 2 cun (3 finger widths) to the left or right. This is at the level of the top of the pubic bone.", "indications": ["Irregular menstruation", "Dysmenorrhea", "Leukorrhea", "Infertility", "Lower abdominal pain", "Hernia"], "technique": "Perpendicular insertion 1.0-1.5 cun.", "notes": "Local point for gynecological issues. \"Return\" — returns the qi to the lower jiao."}, {"code": "LU7", "name": "Lieque (Broken Sequence)", "meridian": "Lung", "location": "On the radial aspect of the forearm, 1.5 cun above the transverse crease of the wrist, in the cleft between the tendons.", "location_detail": "1. Turn your palm upward. 2. Find the wrist crease. 3. Measure 1.5 cun (2 finger widths) up from the crease toward the elbow. 4. The point is in the depression on the thumb side (radial side) of the prominent bone (styloid process of radius).", "indications": ["Cough", "Asthma", "Sore throat", "Headache", "Stiff neck", "Toothache", "Facial paralysis"], "technique": "Oblique insertion 0.2-0.3 cun.", "notes": "Connecting (Luo) point of Lung. Opens the Ren Mai. \"Release the exterior\" point for Lung issues."}, {"code": "SI3", "name": "Houxi (Back Stream)", "meridian": "Small Intestine", "location": "On the ulnar end of the transverse crease of the dorsal aspect of the wrist, in the depression on the ulnar side of the 5th metacarpal bone.", "location_detail": "1. Make a fist. 2. On the back of your hand, find the pinky side (ulnar side). 3. At the wrist crease, in the depression just beside the bony bump of the 5th metacarpal bone base. 4. The point is on the pinky-finger side of this bone.", "indications": ["Neck pain", "Headache", "Stiff neck", "Malaria", "Nasal congestion", "Mental disorders", "Night blindness"], "technique": "Perpendicular insertion 0.3-0.5 cun.", "notes": "Shu-Stream point of Small Intestine. Opens the Du Mai (Governing Vessel). Classic for neck and head issues."}, {"code": "GV27", "name": "Duiduan (Extremity of the Mouth)", "meridian": "Governing Vessel", "location": "At the tip of the central part of the upper lip.", "location_detail": "1. Lift your upper lip. 2. The point is at the center of the upper lip, right at the base where it meets the gum.", "indications": ["Wind stroke", "Mania", "Coma", "Facial paralysis", "Nasal congestion", "Swollen lips"], "technique": "Oblique insertion upward 0.1-0.2 cun.", "notes": "Meeting point of Governing Vessel and Conception Vessel."}, {"code": "EX-HN3", "name": "Yintang (Hall of Impression)", "meridian": "Extra Point", "location": "Midway between the medial ends of the two eyebrows, in the glabella region.", "location_detail": "1. Find the inner (medial) edge of each eyebrow where it meets the bridge of the nose. 2. The point is exactly in the middle between them, in the slight depression. It is directly above the root of the nose.", "indications": ["Anxiety", "Insomnia", "Headache", "Nasal congestion", "Eye strain", "Palpitations", "Dizziness"], "technique": "Transverse insertion upward 0.3-0.5 cun. Pinch the skin upward and insert.", "notes": "Excellent calming point. Often used for stress, worry, and insomnia. Safe for moxa."}];
+
+const SYMPTOMS = {
+  "Head & Face": [
+    { name: "Headache", desc: "General headache, tension headache",
+      patterns: [
+        { name: "Liver Yang Rising", points: [{code:"LV3",name:"Taichong",why:"Source point of Liver. Drains ascending Liver Yang."},{code:"GV20",name:"Baihui",why:"Subdues rising Yang, calms the head."},{code:"GB20",name:"Fengchi",why:"Descends Yang, relieves occipital tension."},{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin to anchor Yang."}], diag: "Tongue: red sides. Pulse: wiry. Irritability, red face, tinnitus, worse with stress." },
+        { name: "Qi Stagnation", points: [{code:"LI4",name:"Hegu",why:"Moves Qi and Blood. Face and mouth: seek Hegu."},{code:"LV3",name:"Taichong",why:"Spreads stagnant Liver Qi."},{code:"SJ5",name:"Waiguan",why:"Opens Shaoyang channel, moves Qi in temples."},{code:"GB8",name:"Shuaigu",why:"Local point for temporal headache."}], diag: "Tongue: normal or slightly dark. Pulse: wiry. Distending pain, worse with stress." },
+        { name: "Blood Deficiency", points: [{code:"GV20",name:"Baihui",why:"Raises clear Yang to the head."},{code:"ST36",name:"Zusanli",why:"Tonifies Qi and Blood."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood."},{code:"LI4",name:"Hegu",why:"Gentle pain relief without draining."}], diag: "Tongue: pale. Pulse: thin. Dull headache, dizziness, worse with exertion." }
+      ]
+    },
+    { name: "Nasal congestion / Sinusitis", desc: "Stuffy nose, sinus pressure",
+      patterns: [
+        { name: "Wind-Cold", points: [{code:"LI20",name:"Yingxiang",why:"Opens nasal passages."},{code:"LI4",name:"Hegu",why:"Releases exterior, opens nose."},{code:"GV14",name:"Dazhui",why:"Releases exterior, expels cold."},{code:"GB20",name:"Fengchi",why:"Expels wind from head."}], diag: "Tongue: thin white coat. Pulse: floating tight. Clear discharge, aversion to cold." },
+        { name: "Wind-Heat", points: [{code:"LI20",name:"Yingxiang",why:"Opens nose, clears heat."},{code:"LI11",name:"Quchi",why:"Clears heat, reduces fever."},{code:"LI4",name:"Hegu",why:"Releases exterior heat."},{code:"SJ5",name:"Waiguan",why:"Clears heat from Shaoyang."}], diag: "Tongue: red tip, thin yellow coat. Thick yellow discharge, fever." },
+        { name: "Damp-Heat", points: [{code:"LI20",name:"Yingxiang",why:"Local point for nose."},{code:"ST40",name:"Fenglong",why:"Resolves phlegm-damp."},{code:"SP6",name:"Sanyinjiao",why:"Transforms dampness."},{code:"LI11",name:"Quchi",why:"Clears heat."}], diag: "Tongue: thick yellow greasy coat. Thick sticky discharge, facial pressure." }
+      ]
+    },
+    { name: "Toothache", desc: "Tooth pain, dental pain",
+      patterns: [
+        { name: "Stomach Fire", points: [{code:"LI4",name:"Hegu",why:"Master analgesic. LI goes through teeth."},{code:"ST6",name:"Jiache",why:"Local point for lower jaw."},{code:"ST36",name:"Zusanli",why:"Clears Stomach heat."},{code:"ST44",name:"Neiting",why:"Ying-Spring point, clears Stomach fire."}], diag: "Tongue: red, yellow coat. Severe burning pain, swollen gums, thirst." },
+        { name: "Kidney Yin Deficiency", points: [{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin."},{code:"LI4",name:"Hegu",why:"Pain relief."},{code:"ST6",name:"Jiache",why:"Local point."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Yin."}], diag: "Tongue: red, little coat. Dull ache, loose teeth, night sweating." }
+      ]
+    }
+  ],
+  "Digestive": [
+    { name: "Nausea / Vomiting", desc: "Morning sickness, motion sickness, chemo",
+      patterns: [
+        { name: "Stomach Cold", points: [{code:"PC6",name:"Neiguan",why:"THE anti-nausea point."},{code:"CV12",name:"Zhongwan",why:"Warms the middle jiao."},{code:"ST36",name:"Zusanli",why:"Harmonizes Stomach."},{code:"CV6",name:"Qihai",why:"Warms with moxa."}], diag: "Tongue: pale, white coat. Cold sensation, relief with warmth." },
+        { name: "Stomach Heat", points: [{code:"PC6",name:"Neiguan",why:"Anti-nausea."},{code:"CV12",name:"Zhongwan",why:"Clears Stomach heat."},{code:"ST44",name:"Neiting",why:"Clears Stomach fire."},{code:"LI11",name:"Quchi",why:"Clears heat."}], diag: "Tongue: red, yellow coat. Burning sensation, bitter taste." },
+        { name: "Liver Qi Invading Stomach", points: [{code:"PC6",name:"Neiguan",why:"Stops nausea."},{code:"LV3",name:"Taichong",why:"Soothes Liver Qi."},{code:"CV12",name:"Zhongwan",why:"Harmonizes Stomach."},{code:"GB34",name:"Yanglingquan",why:"Regulates Liver Qi."}], diag: "Tongue: red sides. Nausea triggered by stress, belching." }
+      ]
+    },
+    { name: "Stomach pain / Bloating", desc: "Epigastric pain, fullness after eating",
+      patterns: [
+        { name: "Cold in Stomach", points: [{code:"CV12",name:"Zhongwan",why:"Front-Mu of Stomach."},{code:"ST36",name:"Zusanli",why:"Warms middle jiao."},{code:"CV6",name:"Qihai",why:"Warms with moxa."},{code:"SP6",name:"Sanyinjiao",why:"Transforms cold-damp."}], diag: "Tongue: pale, white coat. Pain relieved by warmth." },
+        { name: "Damp-Heat in Stomach", points: [{code:"CV12",name:"Zhongwan",why:"Regulates Stomach."},{code:"ST36",name:"Zusanli",why:"Transforms damp."},{code:"SP9",name:"Yinlingquan",why:"Clears damp-heat."},{code:"ST44",name:"Neiting",why:"Clears heat."}], diag: "Tongue: yellow greasy coat. Burning pain, thirst." },
+        { name: "Food Stagnation", points: [{code:"CV12",name:"Zhongwan",why:"Promotes digestion."},{code:"ST36",name:"Zusanli",why:"Harmonizes Stomach."},{code:"ST25",name:"Tianshu",why:"Moves stagnation."},{code:"ST44",name:"Neiting",why:"Clears heat from stagnation."}], diag: "Tongue: thick greasy coat. Bloating after eating, belching." }
+      ]
+    },
+    { name: "Diarrhea", desc: "Loose stools, chronic diarrhea",
+      patterns: [
+        { name: "Spleen Qi Deficiency", points: [{code:"ST25",name:"Tianshu",why:"Regulates Large Intestine."},{code:"ST36",name:"Zusanli",why:"Tonifies Spleen Qi."},{code:"SP6",name:"Sanyinjiao",why:"Strengthens Spleen."},{code:"CV6",name:"Qihai",why:"Warms with moxa."}], diag: "Tongue: pale, teeth marks. Chronic, fatigue, poor appetite." },
+        { name: "Damp-Heat in Intestines", points: [{code:"ST25",name:"Tianshu",why:"Regulates intestines."},{code:"ST36",name:"Zusanli",why:"Transforms damp."},{code:"ST44",name:"Neiting",why:"Clears damp-heat."},{code:"BL25",name:"Dachangshu",why:"Back-Shu of Large Intestine."}], diag: "Tongue: red, yellow greasy coat. Urgent, burning, foul odor." }
+      ]
+    },
+    { name: "Constipation", desc: "Difficulty passing stool",
+      patterns: [
+        { name: "Heat in Intestines", points: [{code:"ST25",name:"Tianshu",why:"Regulates Large Intestine."},{code:"ST36",name:"Zusanli",why:"Promotes peristalsis."},{code:"ST44",name:"Neiting",why:"Clears heat, moistens."},{code:"BL25",name:"Dachangshu",why:"Back-Shu of Large Intestine."}], diag: "Tongue: red, yellow dry coat. Dry hard stool, burning anus." },
+        { name: "Blood Deficiency", points: [{code:"ST25",name:"Tianshu",why:"Regulates intestines."},{code:"ST36",name:"Zusanli",why:"Generates Blood."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood, moistens."},{code:"KI6",name:"Zhaohai",why:"Moistens intestines."}], diag: "Tongue: pale. Dry stool, dizziness, common in elderly." },
+        { name: "Qi Stagnation", points: [{code:"ST25",name:"Tianshu",why:"Moves Qi in intestines."},{code:"LV3",name:"Taichong",why:"Moves Liver Qi."},{code:"ST36",name:"Zusanli",why:"Promotes descent."},{code:"CV6",name:"Qihai",why:"Moves Qi."}], diag: "Tongue: normal or slightly dark. Bloating, worse with stress." }
+      ]
+    }
+  ],
+  "Mental-Emotional": [
+    { name: "Insomnia", desc: "Difficulty falling asleep, staying asleep",
+      patterns: [
+        { name: "Heart Blood Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen. Primary point for sleep."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Blood."},{code:"ST36",name:"Zusanli",why:"Generates Blood."},{code:"Yintang",name:"Yintang",why:"Calms mind."}], diag: "Tongue: pale. Difficulty staying asleep, palpitations." },
+        { name: "Liver Fire", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"LV3",name:"Taichong",why:"Drains Liver fire."},{code:"GV20",name:"Baihui",why:"Calms spirit."},{code:"PC6",name:"Neiguan",why:"Calms heart."}], diag: "Tongue: red sides. Wakes at 1-3am, irritability, vivid dreams." },
+        { name: "Kidney Yin Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"KI3",name:"Taixi",why:"Nourishes Kidney Yin."},{code:"SP6",name:"Sanyinjiao",why:"Nourishes Yin."},{code:"Yintang",name:"Yintang",why:"Calms mind."}], diag: "Tongue: red, little coat. Night sweating, tinnitus, five-palm heat." }
+      ]
+    },
+    { name: "Anxiety / Stress", desc: "Nervousness, worry, feeling overwhelmed",
+      patterns: [
+        { name: "Heart Qi Deficiency", points: [{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"PC6",name:"Neiguan",why:"Calms heart."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"ST36",name:"Zusanli",why:"Tonifies Qi."}], diag: "Tongue: pale. Palpitations, shortness of breath, fatigue." },
+        { name: "Liver Qi Stagnation", points: [{code:"LV3",name:"Taichong",why:"Moves stagnant Qi."},{code:"HT7",name:"Shenmen",why:"Calms Shen."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"GB34",name:"Yanglingquan",why:"Soothes Liver."}], diag: "Tongue: normal or red sides. Tension, chest tightness, sighing." }
+      ]
+    },
+    { name: "Depression", desc: "Low mood, lack of motivation",
+      patterns: [
+        { name: "Liver Qi Stagnation", points: [{code:"GV20",name:"Baihui",why:"Raises Yang, lifts mood."},{code:"LV3",name:"Taichong",why:"Moves Qi."},{code:"CV17",name:"Danzhong",why:"Opens chest."},{code:"PC6",name:"Neiguan",why:"Calms heart."}], diag: "Tongue: normal. Emotional constraint, chest distension." },
+        { name: "Spleen Qi Deficiency with Phlegm", points: [{code:"ST36",name:"Zusanli",why:"Tonifies Qi."},{code:"SP6",name:"Sanyinjiao",why:"Transforms phlegm."},{code:"ST40",name:"Fenglong",why:"Resolves phlegm."},{code:"GV20",name:"Baihui",why:"Raises clear Yang."}], diag: "Tongue: pale, swollen, teeth marks. Heaviness, foggy mind, overthinking." }
+      ]
+    }
+  ],
+  "Pain": [
+    { name: "Lower back pain", desc: "Lumbar pain, sciatica, back strain",
+      patterns: [
+        { name: "Kidney Deficiency", points: [{code:"BL23",name:"Shenshu",why:"Back-Shu of Kidneys."},{code:"KI3",name:"Taixi",why:"Source point of Kidneys."},{code:"GV4",name:"Mingmen",why:"Tonifies Yang."},{code:"BL40",name:"Weizhong",why:"Command point for back."}], diag: "Tongue: pale or red. Chronic, worse with exertion, soreness." },
+        { name: "Cold-Damp Bi", points: [{code:"BL23",name:"Shenshu",why:"Back-Shu of Kidneys."},{code:"BL40",name:"Weizhong",why:"Opens channel."},{code:"GV4",name:"Mingmen",why:"Warms with moxa."},{code:"GB30",name:"Huantiao",why:"Opens hip channel."}], diag: "Tongue: pale, white greasy coat. Heavy sensation, worse in cold/damp." },
+        { name: "Blood Stagnation", points: [{code:"BL40",name:"Weizhong",why:"Command point. Bleed for acute pain."},{code:"BL23",name:"Shenshu",why:"Back-Shu."},{code:"GV1",name:"Changqiang",why:"Opens channel."},{code:"SP10",name:"Xuehai",why:"Moves Blood."}], diag: "Tongue: dark spots. Stabbing pain, fixed location, worse at night." }
+      ]
+    }
+  ],
+  "Women's Health": [
+    { name: "Menstrual pain", desc: "Painful periods, cramps",
+      patterns: [
+        { name: "Cold in Uterus", points: [{code:"SP6",name:"Sanyinjiao",why:"Primary gynecology point."},{code:"CV4",name:"Guanyuan",why:"Warms uterus."},{code:"CV6",name:"Qihai",why:"Warms with moxa."},{code:"ST29",name:"Guilai",why:"Local point."}], diag: "Tongue: pale, white coat. Cramping relieved by warmth, dark clots." },
+        { name: "Qi and Blood Stagnation", points: [{code:"SP6",name:"Sanyinjiao",why:"Moves Blood."},{code:"LI4",name:"Hegu",why:"Moves Qi and Blood."},{code:"LV3",name:"Taichong",why:"Moves Liver Qi."},{code:"SP8",name:"Diji",why:"Xi-cleft, stops pain."}], diag: "Tongue: dark, purple spots. Sharp pain, clots, relief after passing." }
+      ]
+    }
+  ]
+};
+
+let currentTab = 'atlas';
+let searchQuery = '';
+// Ollama URL is handled by backend proxy; frontend uses relative API endpoints
+let ollamaUrl = localStorage.getItem('ollamaUrl') || ''; // Kept for settings compatibility but not used for API calls
+let modelName = localStorage.getItem('modelName') || 'gemma4:31b-cloud';
+let activeProvider = localStorage.getItem('activeProvider') || 'ollama';
+let chatMessages = [];
+let isTyping = false;
+let abortController = null;
+let patientData = null;
+let currentPatientId = null;
+let patientRecipes = [];
+
+document.getElementById('pointCount').textContent = POINTS.length + ' points';
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentTab = tab.dataset.tab;
+        document.getElementById('searchBar').style.display = currentTab === 'chat' ? 'none' : 'block';
+        render();
+    });
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchQuery = e.target.value.toLowerCase();
+    render();
+});
+
+// Settings toggle
+document.getElementById('settingsToggle').addEventListener('click', () => {
+    const panel = document.getElementById('settingsPanel');
+    panel.classList.toggle('open');
+});
+
+// Chat send
+
+function sendChat(text) {
+    const input = document.getElementById('chatInput');
+    const msg = text || input.value.trim();
+    if (!msg || isTyping) return;
+    input.value = '';
+    chatMessages.push({ role: 'user', content: msg });
+    isTyping = true;
+    renderChatWithStop();
+    scrollToBottom();
+
+    abortController = new AbortController();
+    fetch('/api/chat', {
+        method: 'POST',
+        signal: abortController.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            provider: activeProvider,
+            model: modelName,
+            messages: [
+                { role: 'system', content: 'Ты - эксперт по акупунктуре и ТКМ. СТРОГОЕ ПРАВИЛО: Никогда НЕ выдумывай информацию. Если не знаешь точную локацию, функции или показания точки - ответь: "У меня нет точной информации об этой точке. Проверьте вкладку Атлас." Запрещено: придумывать локации, функции, показания, TCM паттерны. Только проверенная информация из твоих знаний. Отвечай на том же языке, на котором пишет пользователь.' },
+                ...chatMessages.slice(-8).map(m => ({ role: m.role, content: m.content }))
+            ],
+            stream: true,
+        }),
+    }).then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        chatMessages.push({ role: 'assistant', content: '' });
+        isTyping = true;
+        renderChatWithStop();
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let content = '';
+        function read() {
+            return reader.read().then(({ done, value }) => {
+                if (done) {
+                    isTyping = false;
+                    loadCustomPoints();
+                    render();
+                    return;
+                }
+                const chunk = decoder.decode(value);
+                const lines = chunk.split('\n').filter(Boolean);
+                for (const line of lines) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.message && data.message.content) {
+                            content += data.message.content;
+                            chatMessages[chatMessages.length - 1].content = content;
+                            const msgEl = document.getElementById('msg-' + (chatMessages.length - 1));
+                            if (msgEl) {
+                                msgEl.innerHTML = content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+                                scrollToBottom();
+                            }
+                        }
+                    } catch (e) {}
+                }
+                return read(); // Recursive call to process the next chunk
+            });
+        }
+        // Start the reading process for the stream
+        return read();
+}).catch(err => {
+        if (err.name === 'AbortError') {
+            chatMessages.push({ role: 'assistant', content: '[Отменено пользователем]' });
+        } else {
+            chatMessages.push({ role: 'assistant', content: 'Connection error: ' + err.message + '. Check settings -> Ollama URL.' });
+        }
+        isTyping = false;
+        abortController = null;
+        render();
+    });
+}
+
+function stopChat() {
+    if (abortController) {
+        abortController.abort();
+    }
+}
+
+function renderChatWithStop() {
+    const content = document.getElementById('content');
+    if (!content) return;
+    let html = '<div class="settings-panel" id="settingsPanel">';
+    html += '<div class="setting-row"><div class="setting-label">Provider</div><select class="setting-input" id="providerSelect"><option value="ollama"' + (activeProvider === 'ollama' ? ' selected' : '') + '>Ollama (Local + Cloud)</option><option value="openrouter"' + (activeProvider === 'openrouter' ? ' selected' : '') + '>OpenRouter</option><option value="nvidia"' + (activeProvider === 'nvidia' ? ' selected' : '') + '>NVIDIA (build.nvidia.com)</option></select></div>';
+    html += '<div class="setting-row"><div class="setting-label">Model</div><input class="setting-input" id="modelNameInput" value="' + modelName + '"></div>';
+    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="password" placeholder="sk-..."></div>';
+    html += '<button class="quick-btn" onclick="saveSettings()">Save &amp; Apply</button>';
+    html += '</div>';
+
+    html += '<div class="chat-container">';
+    html += '<div class="chat-messages" id="chatMessagesContainer">';
+
+    chatMessages.forEach((msg, i) => {
+        html += '<div class="chat-msg ' + msg.role + '" id="msg-' + i + '">' + msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</div>';
+    });
+    html += '<div class="typing" id="typingIndicator">Thinking... <button onclick="stopChat()" style="background:#ef4444;color:white;border:none;border-radius:6px;padding:4px 12px;cursor:pointer;margin-left:10px;">Stop</button></div>';
+
+    html += '</div>';
+    html += '<div class="chat-input-area">';
+    html += '<input class="chat-input" id="chatInput" placeholder="Ask about acupuncture..." onkeydown="if(event.key===\'Enter\')sendChat()">';
+    html += '<button class="chat-send" onclick="sendChat()" id="sendBtn" disabled>Send</button>';
+    html += '</div></div>';
+    content.innerHTML = html;
+    scrollToBottom();
+}
+
+function scrollToBottom() {
+    setTimeout(() => {
+        const el = document.querySelector('.chat-messages');
+        if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
+}
+
+function findPoint(code) {
+    return POINTS.find(p => p.code === code);
+}
+
+function getImageUrl(point) {
+    return IMAGE_MAP[point.meridian] || '';
+}
+
+function renderAtlas() {
+    const filtered = POINTS.filter(p => {
+        if (!searchQuery) return true;
+        return (p.code || '').toLowerCase().includes(searchQuery) || 
+               (p.name || '').toLowerCase().includes(searchQuery) || 
+               (p.meridian || '').toLowerCase().includes(searchQuery) ||
+               (p.location || '').toLowerCase().includes(searchQuery);
+    });
+
+    let html = '';
+    filtered.forEach(p => {
+        const img = getImageUrl(p);
+        html += '<div class="point-card" id="point-' + p.code + '">';
+        html += '<div class="point-header" onclick="togglePoint(\'' + p.code + '\')">';
+        html += '<div class="point-code">' + p.code + '</div>';
+        html += '<div class="point-name">' + p.name + '</div>';
+        html += '<div class="point-meridian">' + p.meridian + '</div>';
+        html += '<div class="chevron">&#9660;</div>';
+        html += '</div>';
+        html += '<div class="point-detail">';
+        if (img) {
+            html += '<img class="point-image" src="' + img + '" alt="' + p.meridian + '" loading="lazy" onerror="this.style.display=\'none\'">';
+        }
+        html += '<div class="detail-section"><div class="detail-label">Location</div><div class="detail-text">' + (p.location || 'Нет данных') + '</div></div>';
+        if (p.location_detail) {
+            html += '<div class="detail-section"><div class="detail-label">Step by step</div><div class="detail-text">' + p.location_detail + '</div></div>';
+        }
+        if (p.technique) {
+            html += '<div class="detail-section"><div class="detail-label">Needling technique</div><div class="detail-text">' + p.technique + '</div></div>';
+        }
+        if (p.notes) {
+            html += '<div class="detail-section"><div class="detail-label">Notes</div><div class="detail-text">' + p.notes + '</div></div>';
+        }
+        if (p.indications && p.indications.length > 0) {
+            html += '<div class="detail-section"><div class="detail-label">Indications</div><div class="indications">';
+            p.indications.forEach(ind => {
+                html += '<span class="indication-tag">' + ind + '</span>';
+            });
+            html += '</div></div>';
+        }
+        html += '</div></div>';
+    });
+    return html;
+}
+
+function renderSymptoms() {
+    let html = '';
+    for (const [category, symptoms] of Object.entries(SYMPTOMS)) {
+        const filtered = symptoms.filter(s => !searchQuery || s.name.toLowerCase().includes(searchQuery));
+        if (filtered.length === 0) continue;
+        html += '<h3 style="color:#fbbf24;margin:20px 0 10px;font-size:1.1rem;">' + category + '</h3>';
+        filtered.forEach((s, si) => {
+            html += '<div class="symptom-card" id="symptom-' + category + '-' + si + '" onclick="toggleSymptom(\'' + category + '-' + si + '\')">';
+            html += '<div class="symptom-name">' + s.name + '</div>';
+            html += '<div class="symptom-desc">' + s.desc + '</div>';
+            html += '<div style="color:#64748b;font-size:0.75rem;margin-top:4px;">' + s.patterns.map(p => p.name).join(' &#8226; ') + '</div>';
+            html += '<div class="pattern-detail">';
+            s.patterns.forEach((pat, pi) => {
+                html += '<div class="pattern-name">Pattern: ' + pat.name + '</div>';
+                pat.points.forEach(pt => {
+                    const full = findPoint(pt.code);
+                    html += '<div class="pattern-point">';
+                    html += '<div class="pattern-point-code">' + pt.code + ' ' + (full ? full.name : pt.name) + '</div>';
+                    html += '<div class="pattern-point-why">' + pt.why + '</div>';
+                    if (full) {
+                        html += '<div style="color:#64748b;font-size:0.8rem;margin-top:4px;">Find: ' + full.location + '</div>';
+                    }
+                    html += '</div>';
+                });
+                html += '<div class="diagnostic">' + pat.diag + '</div>';
+            });
+            html += '</div></div>';
+        });
+    }
+    return html;
+}
+
+function renderChat() {
+    let html = '<div class="settings-panel" id="settingsPanel">';
+    html += '<div class="setting-row"><div class="setting-label">Provider</div><select class="setting-input" id="providerSelect"><option value="ollama"' + (activeProvider === 'ollama' ? ' selected' : '') + '>Ollama (Local + Cloud)</option><option value="openrouter"' + (activeProvider === 'openrouter' ? ' selected' : '') + '>OpenRouter</option><option value="nvidia"' + (activeProvider === 'nvidia' ? ' selected' : '') + '>NVIDIA (build.nvidia.com)</option></select></div>';
+    html += '<div class="setting-row"><div class="setting-label">Model</div><input class="setting-input" id="modelNameInput" value="' + modelName + '"></div>';
+    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="password" placeholder="sk-..."></div>';
+    html += '<button class="quick-btn" onclick="saveSettings()">Save &amp; Apply</button>';
+    html += '</div>';
+
+    html += '<div class="chat-container">';
+    html += '<div class="chat-messages" id="chatMessagesContainer">';
+
+    if (chatMessages.length === 0) {
+        html += '<div class="empty-chat">';
+        html += '<p style="font-size:1.1rem;margin-bottom:20px;">Ask about acupuncture points, symptoms, or treatments</p>';
+        html += '<button class="quick-btn" onclick="sendChat(\'Точки от головной боли\')">Точки от головной боли</button>';
+        html += '<button class="quick-btn" onclick="sendChat(\'Расскажи про ST36 Zusanli\')">Расскажи про ST36 Zusanli</button>';
+        html += '<button class="quick-btn" onclick="sendChat(\'Рецепт от стресса и тревоги\')">Рецепт от стресса и тревоги</button>';
+        html += '<button class="quick-btn" onclick="sendChat(\'Точки от боли в пояснице с паттернами\')">Точки от боли в пояснице</button>';
+        html += '</div>';
+    } else {
+        chatMessages.forEach((msg, i) => {
+            html += '<div class="chat-msg ' + msg.role + '" id="msg-' + i + '">' + msg.content.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>') + '</div>';
+        });
+        if (isTyping) {
+            html += '<div class="typing" id="typingIndicator">Thinking...</div>';
+        }
+    }
+
+    html += '</div>';
+    html += '<div class="chat-input-area">';
+    html += '<input class="chat-input" id="chatInput" placeholder="Ask about acupuncture..." onkeydown="if(event.key===\'Enter\')sendChat()">';
+    html += '<button class="chat-send" onclick="sendChat()" id="sendBtn" ' + (isTyping ? 'disabled' : '') + '>Send</button>';
+    html += '</div></div>';
+    return html;
+}
+
+function render() {
+    const content = document.getElementById('content');
+    if (currentTab === 'atlas') {
+        content.innerHTML = renderAtlas();
+    } else if (currentTab === 'symptoms') {
+        content.innerHTML = renderSymptoms();
+    } else if (currentTab === 'recipes') {
+        content.innerHTML = renderRecipes();
+    } else if (currentTab === 'patients') {
+        content.innerHTML = renderPatients();
+    } else {
+        content.innerHTML = renderChat();
+        scrollToBottom();
+    }
+}
+
+let recipesData = { recipes: [], custom_buttons: [] };
+let recipesLoaded = false;
+
+let patientsData = { patients: [] };
+
+async function loadPatients() {
+    try {
+        const response = await fetch('/api/patients');
+        patientsData = await response.json();
+    } catch (e) {
+        console.log('Error loading patients:', e);
+    }
+}
+
+function renderPatients() {
+    loadPatients();
+    let html = '<div style="max-width:900px;margin:0 auto;padding:16px;">';
+    html += '<h2 style="color:#fbbf24;margin-bottom:20px;">Мои пациенты</h2>';
+    html += '<div id="patientsContainer">';
+    
+    if (patientsData.patients.length === 0) {
+        html += '<div style="color:#64748b;text-align:center;padding:40px;">Нет сохранённых пациентов</div>';
+    } else {
+        patientsData.patients.forEach((patient, index) => {
+            html += '<div class="point-card" style="margin-bottom:12px;" onclick="togglePatient(' + index + ')">';
+            html += '<div class="point-header">';
+            html += '<div style="flex:1;">';
+            html += '<div style="color:#fbbf24;font-weight:600;">' + escapeHtml(patient.name || 'Пациент') + '</div>';
+            html += '<div style="color:#64748b;font-size:0.85rem;margin-top:4px;">' + escapeHtml(patient.age_sex || '') + '</div>';
+            html += '</div>';
+            html += '<div class="chevron">&#9660;</div>';
+            html += '</div>';
+            html += '<div class="point-detail">';
+            html += '<div class="detail-section"><div class="detail-label">Жалобы</div><div class="detail-text">' + escapeHtml(patient.symptoms || '-') + '</div></div>';
+            if (patient.tongue) html += '<div class="detail-section"><div class="detail-label">Язык</div><div class="detail-text">' + escapeHtml(patient.tongue) + '</div></div>';
+            if (patient.pulse) html += '<div class="detail-section"><div class="detail-label">Пульс</div><div class="detail-text">' + escapeHtml(patient.pulse) + '</div></div>';
+            if (patient.notes) html += '<div class="detail-section"><div class="detail-label">Заметки</div><div class="detail-text">' + escapeHtml(patient.notes) + '</div></div>';
+            if (patient.history) html += '<div class="detail-section"><div class="detail-label">Анамнез</div><div class="detail-text">' + escapeHtml(patient.history) + '</div></div>';
+            if (patient.recipes && patient.recipes.length > 0) {
+                html += '<div class="detail-section"><div class="detail-label">Рецепты (' + patient.recipes.length + ')</div>';
+                html += '<div class="recipe-points">';
+                patient.recipes.forEach(rid => {
+                    const rec = recipesData.recipes.find(r => r.id === rid);
+                    html += '<span class="recipe-point"><span class="recipe-point-code">' + (rec ? escapeHtml(rec.name) : escapeHtml(rid)) + '</span></span>';
+                });
+                html += '</div></div>';
+            }
+            html += '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">';
+            html += '<button class="btn-primary" onclick="event.stopPropagation();loadPatient(' + index + ')" style="flex:1;padding:8px 12px;">Загрузить</button>';
+            html += '<button class="btn-secondary" onclick="event.stopPropagation();editPatientFull(' + index + ')" style="flex:1;padding:8px 12px;">✏️ Редактировать</button>';
+            html += '<button class="btn-secondary" onclick="event.stopPropagation();editPatientRecipes(' + index + ')" style="flex:1;padding:8px 12px;">📋 Рецепты</button>';
+            html += '<button class="btn-secondary" onclick="event.stopPropagation();deletePatient(' + index + ')" style="flex:1;padding:8px 12px;background:#ef4444;">🗑️</button>';
+            html += '</div>';
+            html += '</div></div>';
+        });
+    }
+    
+    html += '</div></div>';
+    return html;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function editPatientFull(index) {
+    const patient = patientsData.patients[index];
+    document.getElementById('patientName').value = patient.name || '';
+    document.getElementById('patientAge').value = patient.age_sex || '';
+    document.getElementById('patientSymptoms').value = patient.symptoms || '';
+    document.getElementById('tongue').value = patient.tongue || '';
+    document.getElementById('pulse').value = patient.pulse || '';
+    document.getElementById('thermal').value = patient.thermal || '';
+    document.getElementById('emotion').value = patient.emotion || '';
+    document.getElementById('history').value = patient.history || '';
+    document.getElementById('patientNotes').value = patient.notes || '';
+    patientRecipes = patient.recipes || [];
+    
+    const names = patientRecipes.map(id => {
+        const r = recipesData.recipes.find(rec => rec.id === id);
+        return r ? r.name : id;
+    });
+    document.getElementById('patientRecipesList').innerHTML = patientRecipes.length > 0 ? names.join(', ') : 'Рецепты будут добавлены позже';
+    
+    currentPatientId = patient.id;
+    document.getElementById('patientModalTitle')?.setAttribute('style', '') || null;
+    document.querySelector('#patientModal h2').textContent = 'Редактирование: ' + patient.name;
+    document.getElementById('patientModal').classList.add('open');
+}
+
+function togglePatient(index) {
+    const cards = document.querySelectorAll('.point-card');
+    if (cards[index]) cards[index].classList.toggle('open');
+}
+
+function loadPatient(index) {
+    const patient = patientsData.patients[index];
+    currentPatientId = patient.id;
+    patientData = patient;
+    patientRecipes = patient.recipes || [];
+    
+    const patientInfo = `=== КАРТА ПАЦИЕНТА ===\nИмя: ${patient.name}${patient.age_sex ? '\nВозраст/Пол: ' + patient.age_sex : ''}\n${'='.repeat(30)}\nЖАЛОБЫ И СИМПТОМЫ:\n${patient.symptoms}\n${patient.tongue || patient.pulse ? '\nДИАГНОСТИКА ТКМ:' : ''}\n${patient.tongue ? 'Язык: ' + patient.tongue : ''}\n${patient.pulse ? 'Пульс: ' + patient.pulse : ''}\n${patient.thermal || patient.emotion ? '\nДОПОЛНИТЕЛЬНЫЕ ПРИЗНАКИ:' : ''}\n${patient.thermal ? 'Терморегуляция: ' + patient.thermal : ''}\n${patient.emotion ? 'Эмоции: ' + patient.emotion : ''}\n${patient.history ? '\nИСТОРИЯ БОЛЕЗНИ:\n' + patient.history : ''}\n${patient.recipes && patient.recipes.length > 0 ? '\nНАЗНАЧЕННЫЕ РЕЦЕПТЫ: ' + patient.recipes.length : ''}\n${'='.repeat(30)}\nПроведите дифференциальную диагностику и предложите варианты рецептов.`;
+    
+    closePatientModal();
+    currentTab = 'chat';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="chat"]').classList.add('active');
+    document.getElementById('searchBar').style.display = 'none';
+    render();
+    sendChat(patientInfo);
+}
+
+function editPatientRecipes(index) {
+    const patient = patientsData.patients[index];
+    currentPatientId = patient.id;
+    patientRecipes = patient.recipes || [];
+    showRecipeSelectorForPatient();
+}
+
+function showRecipeSelectorForPatient() {
+    loadRecipes().then(() => {
+        showRecipeSelectorModal();
+    });
+}
+
+function deletePatient(index) {
+    const patient = patientsData.patients[index];
+    if (!confirm('Удалить пациента ' + patient.name + '?')) return;
+    
+    fetch('/api/patients/' + patient.id, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(() => {
+            render();
+        });
+}
+
+async function loadRecipes() {
+    try {
+        const response = await fetch('/api/recipes');
+        recipesData = await response.json();
+        recipesLoaded = true;
+        updateRecipesDisplay();
+    } catch (e) {
+        console.log('Error loading recipes:', e);
+    }
+}
+
+function renderRecipes() {
+    let html = '<div style="max-width:900px;margin:0 auto;padding:16px;">';
+    html += '<h2 style="color:#fbbf24;margin-bottom:20px;">Рецепты лечения</h2>';
+    html += '<div id="recipesContainer"></div>';
+    html += '</div>';
+
+    if (!recipesLoaded) {
+        loadRecipes();
+    } else {
+        setTimeout(updateRecipesDisplay, 0);
+    }
+
+    return html;
+}
+
+function updateRecipesDisplay() {
+    const container = document.getElementById('recipesContainer');
+    if (!container) return;
+
+    let html = '';
+    recipesData.recipes.forEach(recipe => {
+        html += '<div class="recipe-card" onclick="showRecipeDetail(\'' + recipe.id + '\')">';
+        html += '<div class="recipe-header">';
+        if (recipe.image) {
+            html += '<img src="' + recipe.image + '" style="width:60px;height:60px;object-fit:cover;border-radius:8px;" onerror="this.style.display=\'none\'">';
+        }
+        html += '<div>';
+        html += '<div class="recipe-name">' + recipe.name + '</div>';
+        if (recipe.description) {
+            html += '<div class="recipe-desc">' + recipe.description + '</div>';
+        }
+        html += '</div></div>';
+        html += '<div class="recipe-points">';
+        recipe.points.forEach(p => {
+            const fullPoint = POINTS.find(pt => pt.code === p.code);
+            html += '<div class="recipe-point">';
+            html += '<span class="recipe-point-code">' + p.code + '</span>';
+            html += ' ' + (fullPoint ? fullPoint.name.split(' ')[0] : p.name || '');
+            html += '</div>';
+        });
+        html += '</div></div>';
+    });
+
+    // Custom buttons
+    if (recipesData.custom_buttons && recipesData.custom_buttons.length > 0) {
+        html += '<h3 style="color:#fbbf24;margin:24px 0 12px;">Custom Actions</h3>';
+        recipesData.custom_buttons.forEach(btn => {
+            html += '<button class="recipe-btn" style="background:' + btn.color + ';color:white;border:none;padding:12px 20px;border-radius:8px;margin:4px;cursor:pointer;font-size:1rem;"';
+            html += ' onclick="sendCustomPrompt(\'' + btn.id + '\')">' + btn.label + '</button>';
+        });
+    }
+
+    container.innerHTML = html;
+}
+
+function showRecipeDetail(recipeId) {
+    const recipe = recipesData.recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
+    let html = '<div style="max-height:500px;overflow-y:auto;">';
+
+    if (recipe.image) {
+        html += '<img src="' + recipe.image + '" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;margin-bottom:16px;background:#0f172a;">';
+    }
+
+    html += '<div style="color:#fbbf24;font-size:1.2rem;font-weight:600;margin-bottom:8px;">' + recipe.name + '</div>';
+    if (recipe.description) {
+        html += '<div style="color:#94a3b8;margin-bottom:16px;">' + recipe.description + '</div>';
+    }
+
+    if (recipe.indications && recipe.indications.length > 0) {
+        html += '<div style="margin-bottom:16px;">';
+        html += '<div style="color:#fbbf24;font-size:0.8rem;margin-bottom:8px;">INDICATIONS</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:8px;">';
+        recipe.indications.forEach(ind => {
+            html += '<span style="background:#334155;padding:4px 12px;border-radius:12px;font-size:0.85rem;">' + ind + '</span>';
+        });
+        html += '</div></div>';
+    }
+
+    html += '<div style="margin-bottom:16px;">';
+    html += '<div style="color:#fbbf24;font-size:0.8rem;margin-bottom:8px;">POINTS</div>';
+    recipe.points.forEach(p => {
+        const fullPoint = POINTS.find(pt => pt.code === p.code);
+        html += '<div class="pattern-point" style="margin-bottom:8px;">';
+        html += '<div class="pattern-point-code">' + p.code + ' ' + (fullPoint ? fullPoint.name : (p.name || '')) + '</div>';
+        if (p.role) {
+            html += '<div style="color:#64748b;font-size:0.8rem;">Role: ' + p.role + '</div>';
+        }
+        if (fullPoint) {
+            html += '<div style="color:#64748b;font-size:0.8rem;margin-top:4px;">' + fullPoint.location + '</div>';
+        }
+        html += '</div>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+    html += '<div style="display:flex;gap:8px;margin-top:16px;">';
+    html += '<button class="btn-primary" onclick="applyRecipe(\'' + recipeId + '\')" style="flex:1;">Apply Recipe</button>';
+    html += '<button class="btn-secondary" onclick="closeRecipeModal()" style="flex:1;">Close</button>';
+    html += '</div>';
+
+    document.getElementById('recipeModalTitle').textContent = recipe.name;
+    document.getElementById('recipeModalContent').innerHTML = html;
+    document.getElementById('recipeModal').classList.add('open');
+}
+
+function applyRecipe(recipeId) {
+    const recipe = recipesData.recipes.find(r => r.id === recipeId);
+    if (!recipe) return;
+
+    const pointsList = recipe.points.map(p => p.code).join(', ');
+    const prompt = 'Добавь эти точки акупунктуры в план лечения: ' + pointsList + '. Объясни роль и локацию каждой точки.';
+    closeRecipeModal();
+    currentTab = 'chat';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="chat"]').classList.add('active');
+    document.getElementById('searchBar').style.display = 'none';
+    render();
+    sendChat(prompt);
+}
+
+function sendCustomPrompt(buttonId) {
+    const button = recipesData.custom_buttons.find(b => b.id === buttonId);
+    if (!button) return;
+
+    render();
+    sendChat(button.prompt);
+}
+
+// Auto-refresh recipes when tab is shown
+document.addEventListener('DOMContentLoaded', () => {
+    const observer = new MutationObserver(() => {
+        if (currentTab === 'recipes') {
+            updateRecipesDisplay();
+        }
+    });
+});
+
+function togglePoint(code) {
+    const el = document.getElementById('point-' + code);
+    el.classList.toggle('open');
+}
+
+function toggleSymptom(id) {
+    const el = document.getElementById('symptom-' + id);
+    el.classList.toggle('open');
+}
+
+function saveSettings() {
+    modelName = document.getElementById('modelNameInput').value;
+    const sel = document.getElementById('providerSelect');
+    if (sel) activeProvider = sel.value;
+    localStorage.setItem('modelName', modelName);
+    localStorage.setItem('activeProvider', activeProvider);
+    document.getElementById('settingsPanel').classList.remove('open');
+
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if (apiKeyInput) {
+        const apiKey = apiKeyInput.value.trim();
+        if (apiKey) {
+            const envKey = activeProvider === 'openrouter' ? 'OPENROUTER_API_KEY' : activeProvider === 'nvidia' ? 'NVIDIA_API_KEY' : null;
+            if (envKey) {
+                fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: envKey, value: apiKey })
+                }).catch(() => {});
+            }
+        }
+    }
+
+    fetch('/api/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: activeProvider, model: modelName })
+    }).catch(() => {});
+}
+
+function openPatientModal() {
+    patientRecipes = [];
+    document.getElementById('patientRecipesList').innerHTML = 'Рецепты будут добавлены позже';
+    document.getElementById('patientModal').classList.add('open');
+}
+
+function closePatientModal() {
+    document.getElementById('patientModal').classList.remove('open');
+}
+
+function clearPatientForm() {
+    document.getElementById('patientName').value = '';
+    document.getElementById('patientAge').value = '';
+    document.getElementById('patientSymptoms').value = '';
+    document.getElementById('tongue').value = '';
+    document.getElementById('pulse').value = '';
+    document.getElementById('thermal').value = '';
+    document.getElementById('emotion').value = '';
+    document.getElementById('history').value = '';
+    document.getElementById('patientNotes').value = '';
+    patientRecipes = [];
+    document.getElementById('patientRecipesList').innerHTML = 'Рецепты будут добавлены позже';
+    document.getElementById('patientModalTitle').textContent = 'Карта пациента';
+    currentPatientId = null;
+}
+
+function submitPatient(e) {
+    e.preventDefault();
+    const name = document.getElementById('patientName').value || 'Пациент ' + Date.now();
+    const symptoms = document.getElementById('patientSymptoms').value;
+    const tongue = document.getElementById('tongue').value;
+    const pulse = document.getElementById('pulse').value;
+    const thermal = document.getElementById('thermal').value;
+    const emotion = document.getElementById('emotion').value;
+    const history = document.getElementById('history').value;
+    const notes = document.getElementById('patientNotes').value;
+    const age = document.getElementById('patientAge').value;
+
+    if (!symptoms) {
+        alert('Пожалуйста, опишите симптомы пациента');
+        return;
+    }
+
+    const patientPayload = {
+        name: name, age_sex: age, symptoms, tongue, pulse, thermal, emotion, history, notes, recipes: patientRecipes
+    };
+
+    const method = currentPatientId ? 'PUT' : 'POST';
+    const url = currentPatientId ? '/api/patients/' + currentPatientId : '/api/patients';
+
+    fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patientPayload)
+    }).then(res => {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+    }).then(data => {
+        if (!data.success || !data.patient) throw new Error('Invalid response');
+        patientData = data.patient;
+        
+        const patientInfo = `=== КАРТА ПАЦИЕНТА ===\nИмя: ${name}${age ? '\nВозраст/Пол: ' + age : ''}\n${'='.repeat(30)}\nЖАЛОБЫ И СИМПТОМЫ:\n${symptoms}\n${tongue || pulse ? '\nДИАГНОСТИКА ТКМ:' : ''}\n${tongue ? 'Язык: ' + tongue : ''}\n${pulse ? 'Пульс: ' + pulse : ''}\n${thermal || emotion ? '\nДОПОЛНИТЕЛЬНЫЕ ПРИЗНАКИ:' : ''}\n${thermal ? 'Терморегуляция: ' + thermal : ''}\n${emotion ? 'Эмоции: ' + emotion : ''}\n${history ? '\nИСТОРИЯ БОЛЕЗНИ:\n' + history : ''}\n${notes ? '\nЗАМЕТКИ:\n' + notes : ''}\n${patientRecipes.length > 0 ? '\nНАЗНАЧЕННЫЕ РЕЦЕПТЫ: ' + patientRecipes.length : ''}\n${'='.repeat(30)}\nПроведите дифференциальную диагностику и предложите варианты рецептов.`;
+
+        closePatientModal();
+        clearPatientForm();
+        currentTab = 'chat';
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-tab="chat"]').classList.add('active');
+        document.getElementById('searchBar').style.display = 'none';
+        render();
+        sendChat(patientInfo);
+    }).catch(err => {
+        alert('Ошибка сохранения: ' + err.message);
+    });
+}
+
+function sendPatientAndAsk(action) {
+    const name = document.getElementById('patientName').value || 'Пациент ' + Date.now();
+    const symptoms = document.getElementById('patientSymptoms').value;
+    const tongue = document.getElementById('tongue').value;
+    const pulse = document.getElementById('pulse').value;
+    const thermal = document.getElementById('thermal').value;
+    const emotion = document.getElementById('emotion').value;
+    const history = document.getElementById('history').value;
+    const notes = document.getElementById('patientNotes').value;
+    const age = document.getElementById('patientAge').value;
+
+    if (!symptoms) {
+        alert('Пожалуйста, опишите симптомы пациента');
+        return;
+    }
+
+    const patientPayload = {
+        name: name, age_sex: age, symptoms, tongue, pulse, thermal, emotion, history, notes, recipes: patientRecipes
+    };
+
+    fetch('/api/patients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patientPayload)
+    }).then(res => res.json()).then(data => {
+        if (!data.success) throw new Error('Save failed');
+        currentPatientId = data.patient.id;
+        patientData = data.patient;
+        
+        let prompt = `=== КАРТА ПАЦИЕНТА ===\nИмя: ${name}${age ? '\nВозраст/Пол: ' + age : ''}\n${'='.repeat(30)}\nЖАЛОБЫ И СИМПТОМЫ:\n${symptoms}\n${tongue || pulse ? '\nДИАГНОСТИКА ТКМ:' : ''}\n${tongue ? 'Язык: ' + tongue : ''}\n${pulse ? 'Пульс: ' + pulse : ''}\n${thermal || emotion ? '\nДОПОЛНИТЕЛЬНЫЕ ПРИЗНАКИ:' : ''}\n${thermal ? 'Терморегуляция: ' + thermal : ''}\n${emotion ? 'Эмоции: ' + emotion : ''}\n${history ? '\nИСТОРИЯ БОЛЕЗНИ:\n' + history : ''}\n${notes ? '\nЗАМЕТКИ:\n' + notes : ''}\n${patientRecipes.length > 0 ? '\nНАЗНАЧЕННЫЕ РЕЦЕПТЫ: ' + patientRecipes.length : ''}\n${'='.repeat(30)}\n`;
+
+        if (action === 'диагностика') {
+            prompt += 'Проведите полную дифференциальную диагностику по ТКМ. Определите все возможные синдромы и паттерны.';
+        } else if (action === 'рецепты') {
+            prompt += 'Предложите оптимальные рецепты акупунктуры с точками, обоснованием и техникой.';
+        } else if (action === 'анализ') {
+            prompt += 'Дайте полный анализ состояния пациента и рекомендации по лечению.';
+        }
+
+        closePatientModal();
+        clearPatientForm();
+        currentTab = 'chat';
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelector('.tab[data-tab="chat"]').classList.add('active');
+        document.getElementById('searchBar').style.display = 'none';
+        render();
+        sendChat(prompt);
+    }).catch(err => {
+        alert('Ошибка: ' + err.message);
+    });
+}
+
+function openRecipeSelector() {
+    if (typeof recipesData === 'undefined' || !recipesData.recipes) {
+        loadRecipes().then(() => showRecipeSelectorModal());
+    } else {
+        showRecipeSelectorModal();
+    }
+}
+
+function showRecipeSelectorModal() {
+    let html = '<div style="max-height:400px;overflow-y:auto;">';
+    recipesData.recipes.forEach(recipe => {
+        const isAdded = patientRecipes.includes(recipe.id);
+        html += '<div class="recipe-card' + (isAdded ? '" style="border-color:#22c55e;' : '') + '" onclick="togglePatientRecipe(\'' + recipe.id + '\')" style="cursor:pointer;">';
+        html += '<div class="recipe-name">' + recipe.name + '</div>';
+        html += '<div class="recipe-desc">' + recipe.description + '</div>';
+        html += '<div style="font-size:0.8rem;color:' + (isAdded ? '#22c55e' : '#64748b') + ';margin-top:4px;">' + (isAdded ? '✓ Добавлен' : 'Нажмите для добавления') + '</div>';
+        html += '</div>';
+    });
+    html += '</div><button class="btn-primary" onclick="closeRecipeModal()" style="margin-top:12px;">Готово</button>';
+    
+    document.getElementById('recipeModalTitle').textContent = 'Выберите рецепты';
+    document.getElementById('recipeModalContent').innerHTML = html;
+    document.getElementById('recipeModal').classList.add('open');
+}
+
+function togglePatientRecipe(recipeId) {
+    if (patientRecipes.includes(recipeId)) {
+        patientRecipes = patientRecipes.filter(id => id !== recipeId);
+    } else {
+        patientRecipes.push(recipeId);
+    }
+    
+    const listEl = document.getElementById('patientRecipesList');
+    if (patientRecipes.length === 0) {
+        listEl.innerHTML = 'Рецепты будут добавлены позже';
+    } else {
+        const names = patientRecipes.map(id => {
+            const r = recipesData.recipes.find(rec => rec.id === id);
+            return r ? r.name : id;
+        });
+        listEl.innerHTML = names.join(', ');
+    }
+    
+    showRecipeSelectorModal();
+}
+
+function requestRecipes() {
+    if (chatMessages.length === 0) {
+        alert('Сначала введите информацию о пациенте');
+        return;
+    }
+    const prompt = 'На основании информации о пациенте выше, составьте 2-4 рецепта акупунктуры с точками, объясняя выбор каждой точки. Включите дифференциацию паттернов.';
+    render();
+    sendChat(prompt);
+}
+
+function parseRecipeCard(message) {
+    const pointRegex = /\b(LU|LI|ST|SP|ST|HT|SI|PC|SJ|GB|LV|KI|SP|BL|GV|CV|PC|YinTang|Yintang|EX)[0-9]{1,3}\b/gi;
+    const matches = message.match(pointRegex) || [];
+    const uniquePoints = [...new Set(matches.map(p => p.toUpperCase().replace('YINTANG', 'Yintang').replace('YINTANG', 'Yintang')))];
+    return uniquePoints;
+}
+
+function renderRecipeCard(points, explanation, patternName) {
+    let html = '<div style="margin-bottom:20px;">';
+    if (patternName) {
+        html += '<div style="color:#fbbf24;font-weight:600;font-size:1rem;margin-bottom:12px;">' + patternName + '</div>';
+    }
+    if (explanation) {
+        html += '<div style="background:#0f172a;padding:12px;border-radius:8px;margin-bottom:12px;font-size:0.9rem;color:#94a3b8;">' + explanation + '</div>';
+    }
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px;">';
+    points.forEach(code => {
+        const fullPoint = POINTS.find(p => p.code === code);
+        if (fullPoint) {
+            const img = getImageUrl(fullPoint);
+            html += '<div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;cursor:pointer;" onclick="showPointDetail(\'' + code + '\')">';
+            html += '<div style="color:#fbbf24;font-weight:700;font-size:0.9rem;">' + fullPoint.code + '</div>';
+            html += '<div style="font-size:0.85rem;color:#e2e8f0;margin:4px 0;">' + fullPoint.name + '</div>';
+            html += '<div style="font-size:0.75rem;color:#64748b;">' + fullPoint.meridian + '</div>';
+            if (img) {
+                html += '<img src="' + img + '" style="width:100%;height:60px;object-fit:cover;border-radius:4px;margin-top:8px;" onerror="this.style.display=\'none\'">';
+            }
+            html += '</div>';
+        }
+    });
+    html += '</div>';
+    return html;
+}
+
+function showPointDetail(code) {
+    const point = POINTS.find(p => p.code === code);
+    if (!point) return;
+    const img = getImageUrl(point);
+    let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">';
+    html += '<div>';
+    html += '<div style="color:#fbbf24;font-size:1.5rem;font-weight:700;">' + point.code + '</div>';
+    html += '<div style="font-size:1.1rem;margin:8px 0;">' + point.name + '</div>';
+    html += '<div style="background:#334155;padding:4px 12px;border-radius:12px;display:inline-block;font-size:0.85rem;">' + point.meridian + '</div>';
+    if (img) {
+        html += '<img src="' + img + '" style="width:100%;max-height:200px;object-fit:contain;border-radius:8px;margin-top:12px;background:#0f172a;" onerror="this.style.display=\'none\'">';
+    }
+    html += '</div>';
+    html += '<div>';
+    html += '<div style="color:#fbbf24;font-size:0.8rem;font-weight:600;margin-bottom:4px;">LOCATION</div>';
+    html += '<div style="font-size:0.9rem;margin-bottom:12px;">' + point.location + '</div>';
+    if (point.location_detail) {
+        html += '<div style="color:#fbbf24;font-size:0.8rem;font-weight:600;margin-bottom:4px;">STEP BY STEP</div>';
+        html += '<div style="font-size:0.85rem;color:#94a3b8;margin-bottom:12px;">' + point.location_detail + '</div>';
+    }
+    if (point.technique) {
+        html += '<div style="color:#fbbf24;font-size:0.8rem;font-weight:600;margin-bottom:4px;">NEEDLING</div>';
+        html += '<div style="font-size:0.85rem;">' + point.technique + '</div>';
+    }
+    html += '</div></div>';
+    if (point.notes) {
+        html += '<div style="margin-top:16px;padding:12px;background:#0f172a;border-radius:8px;font-size:0.85rem;color:#94a3b8;">' + point.notes + '</div>';
+    }
+    html += '<div style="margin-top:12px;">';
+    html += '<div style="color:#fbbf24;font-size:0.8rem;font-weight:600;margin-bottom:8px;">INDICATIONS</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+    point.indications.forEach(ind => {
+        html += '<span style="background:#334155;padding:4px 10px;border-radius:12px;font-size:0.8rem;">' + ind + '</span>';
+    });
+    html += '</div></div>';
+
+    document.getElementById('recipeModalTitle').textContent = point.code + ' — ' + point.name;
+    document.getElementById('recipeModalContent').innerHTML = html;
+    document.getElementById('recipeModal').classList.add('open');
+}
+
+function closeRecipeModal() {
+    document.getElementById('recipeModal').classList.remove('open');
+}
+
+function openAddPointModal() {
+    document.getElementById('addPointModal').classList.add('open');
+}
+
+function closeAddPointModal() {
+    document.getElementById('addPointModal').classList.remove('open');
+    document.getElementById('addPointForm').reset();
+}
+
+function addNewPoint(e) {
+    e.preventDefault();
+    
+    const code = document.getElementById('pointCode').value.trim().toUpperCase();
+    const meridian = document.getElementById('pointMeridian').value;
+    const name = document.getElementById('pointName').value.trim();
+    const location = document.getElementById('pointLocation').value.trim();
+    const locationDetail = document.getElementById('pointLocationDetail').value.trim();
+    const technique = document.getElementById('pointTechnique').value.trim();
+    const notes = document.getElementById('pointNotes').value.trim();
+    const indicationsStr = document.getElementById('pointIndications').value.trim();
+    const indications = indicationsStr ? indicationsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+
+    if (POINTS.find(p => p.code === code)) {
+        alert('Point ' + code + ' already exists!');
+        return;
+    }
+
+    const newPoint = {
+        code: code,
+        name: name,
+        meridian: meridian,
+        location: location,
+        location_detail: locationDetail || undefined,
+        technique: technique || undefined,
+        notes: notes || undefined,
+        indications: indications
+    };
+
+    POINTS.push(newPoint);
+    localStorage.setItem('customPoints', JSON.stringify(POINTS));
+    
+    document.getElementById('pointCount').textContent = POINTS.length + ' points';
+    
+    closeAddPointModal();
+    render();
+    
+    alert('Point ' + code + ' added successfully!');
+}
+
+function loadCustomPoints() {
+    fetch('/api/points')
+        .then(res => res.json())
+        .then(data => {
+            const points = data.points || [];
+            points.forEach(p => {
+                if (!POINTS.find(existing => existing.code === p.code)) {
+                    POINTS.push(p);
+                }
+            });
+            document.getElementById('pointCount').textContent = POINTS.length + ' points';
+        })
+        .catch(e => {
+            const saved = localStorage.getItem('customPoints');
+            if (saved) {
+                try {
+                    const custom = JSON.parse(saved);
+                    custom.forEach(p => {
+                        if (!POINTS.find(existing => existing.code === p.code)) {
+                            POINTS.push(p);
+                        }
+                    });
+                } catch(e) {}
+            }
+        });
+}
+
+loadCustomPoints();
+
+function showRecipeModalFromResponse(text) {
+    const lines = text.split('\n');
+    let currentPattern = '';
+    let currentPoints = [];
+    let currentExplanation = '';
+    let recipes = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        const pointMatch = line.match(/\b(LU|LI|ST|SP|HT|SI|PC|SJ|GB|LV|KI|BL|GV|CV|YinTang|EX)[0-9]{1,3}\b/i);
+        if (pointMatch) {
+            const cleaned = line.replace(/[•\-\*\d\.]+/g, '').trim();
+            if (cleaned) currentPoints.push(cleaned);
+        }
+        if (line.toLowerCase().includes('pattern') || line.toLowerCase().includes('рецепт') || line.includes('**')) {
+            if (currentPoints.length > 0) {
+                const uniquePts = [...new Set(currentPoints.map(p => {
+                    const m = p.match(/(LU|LI|ST|SP|HT|SI|PC|SJ|GB|LV|KI|BL|GV|CV|YinTang|EX)[0-9]{1,3}/i);
+                    return m ? m[0].toUpperCase().replace('YINTANG', 'Yintang') : null;
+                }).filter(Boolean))];
+                if (uniquePts.length > 0) {
+                    recipes.push({ pattern: currentPattern, points: uniquePts, explanation: currentExplanation });
+                }
+            }
+            currentPattern = line.replace(/\*\*/g, '').replace(/pattern/gi, 'Pattern').replace(/рецепт/gi, 'Рецепт');
+            currentPoints = [];
+            currentExplanation = '';
+        }
+    }
+    if (currentPoints.length > 0) {
+        const uniquePts = [...new Set(currentPoints.map(p => {
+            const m = p.match(/(LU|LI|ST|SP|HT|SI|PC|SJ|GB|LV|KI|BL|GV|CV|YinTang|EX)[0-9]{1,3}/i);
+            return m ? m[0].toUpperCase().replace('YINTANG', 'Yintang') : null;
+        }).filter(Boolean))];
+        if (uniquePts.length > 0) {
+            recipes.push({ pattern: currentPattern, points: uniquePts, explanation: currentExplanation });
+        }
+    }
+
+    if (recipes.length === 0) {
+        const allPoints = parseRecipeCard(text);
+        if (allPoints.length > 0) {
+            recipes.push({ pattern: 'Detected Points', points: allPoints, explanation: '' });
+        }
+    }
+
+    if (recipes.length > 0) {
+        let modalHtml = '<div style="max-height:500px;overflow-y:auto;">';
+        recipes.forEach(r => {
+            modalHtml += renderRecipeCard(r.points, r.explanation, r.pattern);
+        });
+        modalHtml += '</div>';
+        modalHtml += '<div style="display:flex;gap:8px;margin-top:16px;">';
+        modalHtml += '<button class="btn-primary" onclick="closeRecipeModal()" style="flex:1;">Закрыть</button>';
+        modalHtml += '</div>';
+        document.getElementById('recipeModalTitle').textContent = 'Рецепты (' + recipes.length + ')';
+        document.getElementById('recipeModalContent').innerHTML = modalHtml;
+        document.getElementById('recipeModal').classList.add('open');
+    }
+}
+
+function checkForRecipe(response) {
+    const lastMsg = chatMessages[chatMessages.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant') {
+        const points = parseRecipeCard(lastMsg.content);
+        if (points.length >= 2) {
+            setTimeout(() => showRecipeModalFromResponse(lastMsg.content), 1000);
+        }
+    }
+}
+
+function toggleTab(tabName) {
+    currentTab = tabName;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.tab[data-tab="' + tabName + '"]').classList.add('active');
+    document.getElementById('searchBar').style.display = tabName === 'chat' ? 'none' : 'block';
+    document.getElementById('chatActions').style.display = tabName === 'chat' ? 'flex' : 'none';
+    render();
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => toggleTab(tab.dataset.tab));
+});
+
+function login() {
+    const pw = document.getElementById('loginPassword').value;
+    if (pw === 'shalom') {
+        document.getElementById('loginOverlay').style.display = 'none';
+        sessionStorage.setItem('loggedIn', '1');
+    } else {
+        document.getElementById('loginError').style.display = 'block';
+    }
+}
+if (!sessionStorage.getItem('loggedIn')) {
+    document.getElementById('loginOverlay').style.display = 'flex';
+} else {
+    document.getElementById('loginOverlay').style.display = 'none';
+}
+
+loadCustomPoints();
+document.getElementById('pointCount').textContent = POINTS.length + ' points';
+</script>
+</body>
+</html>

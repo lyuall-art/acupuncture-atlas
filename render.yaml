@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: acupuncture-atlas
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ACTIVE_PROVIDER
+        value: ollama
+      - key: MODEL_NAME
+        value: gemma4:31b-cloud
+      - key: OLLAMA_URL
+        value: http://localhost:11434
+      - key: PYTHON_VERSION
+        value: 3.12

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+<body>
+<div id="app">{{ msg }}</div>
+<script>
+Vue.createApp({
+  setup() {
+    return { msg: 'WORKING!' }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>

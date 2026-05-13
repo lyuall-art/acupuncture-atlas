@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atlas Acupuncture</title>
+    <style>
+        body { margin: 0; background: #020617; color: #e2e8f0; font-family: sans-serif; min-height: 100vh; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #fbbf24; font-size: 1.8em; margin-bottom: 20px; text-align: center; }
+        .point-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .point-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .point-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .point-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #fbbf24;
+        }
+        .code {
+            color: #fbbf24;
+            font-weight: bold;
+            font-size: 1.3em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .code-icon {
+            width: 20px;
+            height: 20px;
+            background: #fbbf24;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #020617;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+        .name {
+            color: #cbd5e1;
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+        .meridian {
+            color: #64748b;
+            font-size: 0.85em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+            padding: 2px 8px;
+            background: rgba(100, 116, 139, 0.2);
+            border-radius: 12px;
+            display: inline-block;
+        }
+        .location {
+            color: #94a3b8;
+            font-size: 0.9em;
+            margin-bottom: 16px;
+            line-height: 1.5;
+            padding: 12px;
+            background: rgba(30, 41, 59, 0.4);
+            border-radius: 12px;
+            border-left: 3px solid #64748b;
+        }
+        .indications {
+            margin-top: 16px;
+        }
+        .indications-label {
+            color: #fbbf24;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag {
+            background: rgba(30, 41, 59, 0.5);
+            color: #94a3b8;
+            font-size: 0.8em;
+            padding: 4px 10px;
+            border-radius: 16px;
+            display: inline-block;
+            margin: 4px 6px 4px 0;
+            transition: all 0.2s;
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+        .tag:hover {
+            background: rgba(30, 41, 59, 0.7);
+            color: #fbbf24;
+            transform: scale(1.05);
+        }
+        .stats {
+            margin-top: 20px;
+            text-align: center;
+            color: #64748b;
+            font-size: 0.9em;
+            padding-top: 20px;
+            border-top: 1px solid rgba(71, 85, 105, 0.2);
+        }
+        @media (max-width: 600px) {
+            .container { padding: 15px; }
+            .point-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Atlas Acupuncture</h1>
+        <div class="point-grid">
+            <div class="point-card">
+                <div class="code">
+                    <div class="code-icon">20</div>
+                    <span>GV20</span>
+                </div>
+                <div class="name">Baihui (Hundred Convergences)</div>
+                <div class="meridian">Governing Vessel</div>
+                <div class="location">On the top of the head, at the midpoint of the line connecting the apexes of both ears.</div>
+                <div class="indications">
+                    <div class="indications-label">Indications:</div>
+                    <span class="tag">Headache</span>
+<span class="tag">Dizziness</span>
+<span class="tag">Insomnia</span>
+<span class="tag">Anxiety</span>
+<span class="tag">Depression</span>
+<span class="tag">Prolapse</span>
+
+                </div>
+            </div>
+        </div>
+        <div class="stats">
+            <p>1 unique acupuncture points</p>
+            <p>Local file version - works without internet</p>
+        </div>
+    </div>
+</body>
+</html>

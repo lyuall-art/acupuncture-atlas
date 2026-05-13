@@ -1,0 +1,99 @@
+{
+  "points": [
+    {
+      "code": "ST34",
+      "name": "Liangqiu (Beam Mound)",
+      "meridian": "Stomach",
+      "location": "When the knee is flexed, the point is 2 cun above the laterosuperior border of the patella.",
+      "location_detail": "",
+      "technique": "Standard needling",
+      "notes": "Traditional Action: Subdues rebellious Stomach Qi, removes obstructions from channel, expels damp and wind.",
+      "indications": [
+        "Pain and numbness of the knee",
+        "Gastric pain",
+        "Mastitis",
+        "Motor impairment of the lower extremities"
+      ],
+      "created_at": "2026-05-10T11:00:39.462737"
+    },
+    {
+      "code": "ST35",
+      "name": "Dubi (Calf Nose)",
+      "meridian": "Stomach",
+      "location": "When the knee is flexed, the point is at the lower border of the patella, in the depression lateral to the patellar ligament.",
+      "location_detail": "",
+      "technique": "Standard needling",
+      "notes": "Traditional Action: Invigorates the channel, relieves swelling, stops pain.",
+      "indications": [
+        "Pain, numbness and motor impairment of the knee",
+        "Beriberi"
+      ],
+      "created_at": "2026-05-10T11:43:00.052857"
+    },
+    {
+      "code": "ST12",
+      "name": "Quepen (Empty Basin)",
+      "meridian": "Stomach",
+      "location": "In the midpoint of the supraclavicular fossa, 4 cun lateral to the anterior midline.",
+      "location_detail": "",
+      "technique": "Perpendicular or oblique insertion 0.3-0.5 cun. Do not puncture deeply - important organs beneath.",
+      "notes": "Contraindicated in pregnancy.",
+      "indications": [
+        "Cough, asthma, sore throat",
+        "Pain in the supraclavicular fossa",
+        "Scrofula"
+      ],
+      "created_at": "2026-05-10T13:31:58.500136"
+    },
+    {
+      "code": "ST16",
+      "name": "Yingchuang (Breast Window)",
+      "meridian": "Stomach",
+      "location": "On the chest, in the 3rd intercostal space, 4 cun lateral to the anterior median line.",
+      "location_detail": "",
+      "technique": "Oblique or subcutaneous insertion 0.5 - 0.8 cun. Do not puncture deeply.",
+      "notes": "Under points ST11 to ST18 are important organs and a main artery.",
+      "indications": [
+        "Cough and asthma",
+        "Distention and pain in the chest and hypochondria",
+        "Acute mastitis"
+      ],
+      "created_at": "2026-05-12T10:09:00.316232"
+    },
+    {
+      "code": "LU2",
+      "name": "Yunmen (Облачные врата)",
+      "meridian": "Lung",
+      "location": "В углублении у соединения ключицы с грудиной, в первой реберной щели, под акромиальным концом ключицы.",
+      "location_detail": "1. Поднимите руку вверх и в сторону. 2. Нащупайте ямочку под ключицей у грудины. 3. Точка в углублении под акромиальным концом ключицы.",
+      "technique": "Косый или подкожный укол 0.5-0.8 цуня. Не колоть глубоко — под точкой лёгкое.",
+      "notes": "Точка входа Ци лёгких. Не используется при пневмотораксе.",
+      "indications": [
+        "Затруднённое дыхание, одышка",
+        "Кашель",
+        "Чувство распирания в грудной клетке",
+        "Застой Ци в груди, стресс"
+      ],
+      "created_at": "2026-05-13T03:28:16.826387",
+      "source": "agent"
+    },
+    {
+      "code": "KI1",
+      "name": "Yongquan (Бурлящий родник)",
+      "meridian": "Kidney",
+      "location": "На подошве стопы, в углублении на границе передней и средней трети подошвы, при сгибании пальцев стопы.",
+      "location_detail": "1. Сядьте, согните пальцы ноги. 2. На подошве образуется ямочка в передней трети. 3. Точка в самой глубокой части этой ямочки.",
+      "technique": "Перпендикулярный укол 0.5-1.0 цуня. Часто используется с моксой.",
+      "notes": "Первая точка меридиана Почек. Точка-источник. Сильно тонизирует Инь.",
+      "indications": [
+        "Головная боль, головокружение",
+        "Потеря сознания, шок",
+        "Бессонница, тревога",
+        "Сухость в горле, осиплость голоса",
+        "Гипертония"
+      ],
+      "created_at": "2026-05-13T03:48:26.330139",
+      "source": "agent"
+    }
+  ]
+}

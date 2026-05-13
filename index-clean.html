@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlas Acupuncture</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<style>
+  [v-cloak] { display: none; }
+  .scroll-thin { scrollbar-width: thin; scrollbar-color: #475569 transparent; }
+  .scroll-thin::-webkit-scrollbar { width: 4px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+  .typing-dot { animation: typing 1.4s infinite ease-in-out both; }
+  .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+  @keyframes typing { 0%,80%,100% { transform: scale(0); } 40% { transform: scale(1); } }
+  .point-svg { cursor: pointer; transition: all 0.2s; }
+  .point-svg:hover { filter: drop-shadow(0 0 6px rgba(245,158,11,0.8)); }
+  .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
+  .fade-enter-from, .fade-leave-to { opacity: 0; }
+  .slide-enter-active, .slide-leave-active { transition: transform 0.3s, opacity 0.3s; }
+  .slide-enter-from { transform: translateX(100%); opacity: 0; }
+  .slide-leave-to { transform: translateX(100%); opacity: 0; }
+</style>
+</head>
+<body class="bg-slate-950 text-slate-100 overflow-hidden h-screen">
+<div id="app" v-cloak class="h-screen flex flex-col">
+  <!-- Header -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-700/50 px-4 py-2.5 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center gap-2">
+      <svg class="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/>
+        <circle cx="12" cy="8" r="1.5" fill="currentColor"/><circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+        <circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+      </svg>
+      <h1 class="text-lg font-semibold text-slate-100">Atlas Acupuncture</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'atlas' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">Atlas</span>
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'symptoms' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">Symptoms</span>
+      <span class="text-xs px-2 py-0.5 rounded-full" :class="currentTab === 'chat' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-400'">AI</span>
+      <button @click="toggleSettings" class="p-1.5 rounded-lg hover:bg-slate-700/50 ml-1">
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab navigation -->
+  <div class="flex border-b border-slate-700/50 bg-slate-900/50 shrink-0">
+    <button @click="currentTab = 'atlas'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'atlas' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">Atlas</button>
+    <button @click="currentTab = 'symptoms'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'symptoms' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">Symptoms</button>
+    <button @click="currentTab = 'chat'" class="flex-1 py-2 text-sm font-medium transition" :class="currentTab === 'chat' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-slate-400 hover:text-slate-200'">AI Chat</button>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 overflow-hidden">
+
+    <!-- ATLAS TAB -->
+    <div v-show="currentTab === 'atlas'" class="h-full flex flex-col sm:flex-row">
+      <!-- Body diagram -->
+      <div class="sm:w-80 flex-shrink-0 overflow-y-auto scroll-thin p-3 bg-slate-900/30">
+        <!-- Search -->
+        <div class="mb-3">
+          <input v-model="atlasSearch" type="text" placeholder="Search points..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" />
+        </div>
+        <!-- Meridian filter -->
+        <div class="flex flex-wrap gap-1.5 mb-3">
+          <button @click="activeMeridian = null" class="text-xs px-2 py-1 rounded-full transition" :class="!activeMeridian ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">All</button>
+          <button v-for="m in meridians" :key="m" @click="activeMeridian = activeMeridian === m ? null : m" class="text-xs px-2 py-1 rounded-full transition" :class="activeMeridian === m ? 'bg-amber-500/30 text-amber-300' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'">{{ m }}</button>
+        </div>
+        <!-- Points list -->
+        <div v-for="point in filteredPoints" :key="point.code" @click="selectPoint(point)" class="mb-2 p-2.5 rounded-lg cursor-pointer transition" :class="selectedPoint?.code === point.code ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-slate-800/50 hover:bg-slate-800 border border-transparent'">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-amber-400 font-bold text-sm">{{ point.code }}</span>
+            <span class="text-[10px] text-slate-500 bg-slate-700/50 px-1.5 py-0.5 rounded">{{ point.meridian }}</span>
+          </div>
+          <p class="text-xs text-slate-300">{{ point.name }}</p>
+          <p class="text-[11px] text-slate-500 mt-0.5 line-clamp-2">{{ point.location }}</p>
+        </div>
+      </div>
+
+      <!-- Point detail -->
+      <div class="flex-1 overflow-y-auto scroll-thin">
+        <div v-if="selectedPoint" class="p-4 max-w-2xl mx-auto">
+          <!-- Point header -->
+          <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 mb-4">
+            <div class="flex items-start justify-between mb-2">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-2xl font-bold text-amber-400">{{ selectedPoint.code }}</span>
+                  <span class="text-sm text-slate-500">{{ selectedPoint.meridian }}</span>
+                </div>
+                <h2 class="text-lg text-slate-200">{{ selectedPoint.name }}</h2>
+              </div>
+              <button @click="selectedPoint = null" class="text-slate-400 hover:text-slate-200 p-1">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Atlas Image -->
+          <div v-if="selectedPointImage" class="bg-slate-800/30 rounded-xl border border-slate-700/30 mb-4 overflow-hidden">
+            <img :src="selectedPointImage" :alt="selectedPoint.meridian" loading="lazy" class="w-full h-auto max-h-96 object-contain bg-slate-900" @error="imageError" />
+            <p class="text-[10px] text-slate-500 mt-1 px-3 pb-2 text-center">Atlas of Acupuncturology (Jaung-Geng Lin)</p>
+          </div>
+
+          <!-- Location -->
+          <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Location / How to find</h3>
+            <p class="text-sm text-slate-200 leading-relaxed">{{ selectedPoint.location }}</p>
+            <div v-if="selectedPoint.locationDetail" class="mt-2 text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3">
+              <p class="font-medium text-slate-300 mb-1">Step by step:</p>
+              <p>{{ selectedPoint.locationDetail }}</p>
+            </div>
+          </div>
+
+          <!-- Indications -->
+          <div class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Indications</h3>
+            <div class="flex flex-wrap gap-1.5">
+              <span v-for="ind in selectedPoint.indications" :key="ind" class="text-xs bg-slate-700/50 text-slate-300 px-2 py-1 rounded-full">{{ ind }}</span>
+            </div>
+          </div>
+
+          <!-- Technique -->
+          <div v-if="selectedPoint.technique" class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Needling technique</h3>
+            <p class="text-sm text-slate-300">{{ selectedPoint.technique }}</p>
+          </div>
+
+          <!-- Notes -->
+          <div v-if="selectedPoint.notes" class="bg-slate-800/30 rounded-xl p-4 border border-slate-700/30 mb-4">
+            <h3 class="text-sm font-semibold text-amber-400 mb-2">Notes</h3>
+            <p class="text-sm text-slate-300">{{ selectedPoint.notes }}</p>
+          </div>
+
+          <!-- Ask AI about this point -->
+          <button @click="askAboutPoint(selectedPoint)" class="w-full bg-amber-500/10 text-amber-400 py-2.5 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition border border-amber-500/20">
+            Ask AI about this point
+          </button>
+        </div>
+
+        <!-- Default view - body diagram -->
+        <div v-else class="p-4">
+          <div class="bg-slate-800/30 rounded-xl p-6 border border-slate-700/30 text-center">
+            <svg viewBox="0 0 200 400" class="w-48 h-auto mx-auto mb-4">
+              <!-- Simplified body outline -->
+              <ellipse cx="100" cy="40" rx="22" ry="28" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <line x1="100" y1="68" x2="100" y2="80" stroke="#475569" stroke-width="2"/>
+              <!-- Torso -->
+              <path d="M70,80 Q100,75 130,80 L135,180 Q100,190 65,180 Z" fill="none" stroke="#475569" stroke-width="1.5"/>
+              <!-- Arms -->
+              <line x1="70" y1="85" x2="35" y2="150" stroke="#475569" stroke-width="1.5"/>
+              <line x1="35" y1="150" x2="25" y2="220" stroke="#475569" stroke-width="1.5"/>
+              <line x1="130" y1="85" x2="165" y2="150" stroke="#475569" stroke-width="1.5"/>
+              <line x1="165" y1="150" x2="175" y2="220" stroke="#475569" stroke-width="1.5"/>
+              <!-- Legs -->
+              <line x1="85" y1="185" x2="80" y2="280" stroke="#475569" stroke-width="1.5"/>
+              <line x1="80" y1="280" x2="78" y2="360" stroke="#475569" stroke-width="1.5"/>
+              <line x1="115" y1="185" x2="120" y2="280" stroke="#475569" stroke-width="1.5"/>
+              <line x1="120" y1="280" x2="122" y2="360" stroke="#475569" stroke-width="1.5"/>
+
+              <!-- Meridian lines (simplified) -->
+              <!-- Governing Vessel (midline back) -->
+              <line x1="100" y1="12" x2="100" y2="185" stroke="#06b6d4" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.6"/>
+              <!-- Stomach meridian -->
+              <line x1="115" y1="12" x2="115" y2="70" stroke="#22c55e" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+              <line x1="112" y1="180" x2="110" y2="360" stroke="#22c55e" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+              <!-- Large Intestine -->
+              <line x1="30" y1="220" x2="35" y2="150" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+
+              <!-- Points -->
+              <circle cx="100" cy="12" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="100" y="8" text-anchor="middle" fill="#f59e0b" font-size="6" font-weight="bold">GV20</text>
+
+              <circle cx="100" cy="52" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="115" y="54" fill="#94a3b8" font-size="5">LI20</text>
+
+              <circle cx="100" cy="100" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="115" y="102" fill="#94a3b8" font-size="5">CV17</text>
+
+              <circle cx="25" y="220" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="12" y="225" fill="#f59e0b" font-size="5" font-weight="bold">LI4</text>
+
+              <circle cx="35" y="155" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="15" y="150" fill="#94a3b8" font-size="5">LI11</text>
+
+              <circle cx="112" y="270" r="3" fill="#f59e0b" opacity="0.8"/>
+              <text x="125" y="273" fill="#f59e0b" font-size="5" font-weight="bold">ST36</text>
+
+              <circle cx="110" y="310" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="123" y="313" fill="#94a3b8" font-size="5">SP6</text>
+
+              <circle cx="78" y="355" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="62" y="360" fill="#94a3b8" font-size="5">LV3</text>
+
+              <circle cx="80" y="285" r="2.5" fill="#94a3b8" opacity="0.7"/>
+              <text x="63" y="285" fill="#94a3b8" font-size="5">GB34</text>
+            </svg>
+            <p class="text-slate-500 text-sm">Select a point from the list to see details</p>
+            <p class="text-slate-600 text-xs mt-1">{{ filteredPoints.length }} points available</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYMPTOMS TAB -->
+    <div v-show="currentTab === 'symptoms'" class="h-full overflow-y-auto scroll-thin p-4">
+      <div class="max-w-2xl mx-auto">
+        <h2 class="text-lg font-semibold text-slate-100 mb-4">Select a symptom</h2>
+        <!-- Symptom search -->
+        <div class="mb-4">
+          <input v-model="symptomSearch" type="text" placeholder="Search symptoms..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" />
+        </div>
+        <!-- Symptom categories -->
+        <div v-for="cat in filteredSymptomCategories" :key="cat.name" class="mb-4">
+          <h3 class="text-sm font-medium text-amber-400 mb-2">{{ cat.name }}</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button v-for="sym in cat.symptoms" :key="sym.name" @click="selectSymptom(sym)" class="text-left bg-slate-800/50 rounded-lg p-3 border border-slate-700/30 hover:bg-slate-800 hover:border-amber-500/30 transition">
+              <div class="text-sm text-slate-200 font-medium">{{ sym.name }}</div>
+              <div class="text-xs text-slate-500 mt-1">{{ sym.points.map(p => p.code).join(', ') }}</div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Symptom detail modal -->
+      <transition name="slide">
+        <div v-if="selectedSymptom" class="fixed inset-0 z-30 bg-slate-950/90 backdrop-blur-sm overflow-y-auto scroll-thin">
+          <div class="min-h-screen p-4">
+            <div class="max-w-2xl mx-auto">
+              <button @click="selectedSymptom = null" class="mb-4 flex items-center gap-1 text-slate-400 hover:text-slate-200 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg>
+                Back to symptoms
+              </button>
+              <h2 class="text-xl font-bold text-amber-400 mb-1">{{ selectedSymptom.name }}</h2>
+              <p class="text-sm text-slate-400 mb-4">{{ selectedSymptom.description }}</p>
+
+              <!-- Patterns tabs -->
+              <div v-if="selectedSymptom.patterns" class="mb-4">
+                <div class="flex gap-2 overflow-x-auto pb-2 scroll-thin">
+                  <button v-for="(pat, pi) in selectedSymptom.patterns" :key="pi" @click="activePattern = pi" class="shrink-0 text-xs px-3 py-1.5 rounded-full transition whitespace-nowrap" :class="activePattern === pi ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50' : 'bg-slate-800 text-slate-400 border border-slate-700'">
+                    {{ pat.name }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Active pattern details -->
+              <div v-if="activePattern !== null && selectedSymptom.patterns?.[activePattern]" class="mb-4">
+                <div class="bg-amber-500/5 rounded-xl p-4 border border-amber-500/20 mb-3">
+                  <h3 class="text-sm font-semibold text-amber-400 mb-1">Pattern: {{ selectedSymptom.patterns[activePattern].name }}</h3>
+                  <p class="text-xs text-slate-400"><strong class="text-slate-300">Diagnostic clues:</strong> {{ selectedSymptom.patterns[activePattern].diagnosticQ }}</p>
+                </div>
+                <div class="space-y-3 mb-6">
+                  <div v-for="sp in selectedSymptom.patterns[activePattern].points" :key="sp.code" class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+                    <div class="flex items-start justify-between mb-2">
+                      <div>
+                        <span class="text-amber-400 font-bold text-lg">{{ sp.code }}</span>
+                        <span class="text-sm text-slate-300 ml-2">{{ sp.name }}</span>
+                      </div>
+                      <button @click="openPointInAtlas(sp)" class="text-xs text-amber-400 hover:text-amber-300">View in Atlas →</button>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-2"><strong class="text-slate-300">Find it:</strong> {{ sp.location }}</p>
+                    <p class="text-sm text-slate-300"><strong class="text-amber-400/80">Why:</strong> {{ sp.why }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Fallback for old-style symptoms without patterns -->
+              <div v-else-if="selectedSymptom.points" class="space-y-3 mb-6">
+                <div v-for="sp in selectedSymptom.points" :key="sp.code" class="bg-slate-800/50 rounded-xl p-4 border border-slate-700/30">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <span class="text-amber-400 font-bold text-lg">{{ sp.code }}</span>
+                      <span class="text-sm text-slate-300 ml-2">{{ sp.name }}</span>
+                    </div>
+                    <button @click="openPointInAtlas(sp)" class="text-xs text-amber-400 hover:text-amber-300">View in Atlas →</button>
+                  </div>
+                  <p class="text-xs text-slate-400 mb-2"><strong class="text-slate-300">Find it:</strong> {{ sp.location }}</p>
+                  <p class="text-sm text-slate-300"><strong class="text-amber-400/80">Why:</strong> {{ sp.why }}</p>
+                </div>
+              </div>
+
+              <!-- Ask AI -->
+              <button @click="askAboutSymptom(selectedSymptom)" class="w-full bg-amber-500/10 text-amber-400 py-3 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition border border-amber-500/20">
+                Ask AI for detailed prescription
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+
+    <!-- CHAT TAB -->
+    <div v-show="currentTab === 'chat'" class="h-full flex flex-col">
+      <div class="flex-1 overflow-y-auto scroll-thin p-3 space-y-3" ref="chatMessages">
+        <div v-if="messages.length === 0" class="text-center py-12">
+          <svg class="w-14 h-14 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+            <path d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/>
+          </svg>
+          <p class="text-slate-500 text-sm mb-4">Ask about points, symptoms, or treatments</p>
+          <div class="space-y-2 max-w-sm mx-auto">
+            <button @click="quickQuestion('Points for headache')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Points for headache?</button>
+            <button @click="quickQuestion('Tell me about ST36 Zusanli')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Tell me about ST36 Zusanli</button>
+            <button @click="quickQuestion('Recipe for stress and anxiety')" class="block w-full text-left text-xs bg-slate-800/50 text-slate-400 rounded-lg px-3 py-2.5 hover:bg-slate-700/50 transition border border-slate-700/30">Recipe for stress and anxiety</button>
+          </div>
+        </div>
+        <div v-for="(msg, i) in messages" :key="i" class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+          <div class="max-w-[88%] rounded-xl px-3 py-2.5 text-sm leading-relaxed" :class="msg.role === 'user' ? 'bg-amber-500/20 text-amber-100' : 'bg-slate-800 text-slate-200'">
+            <div v-html="formatMarkdown(msg.content)"></div>
+          </div>
+        </div>
+        <div v-if="isTyping" class="flex justify-start">
+          <div class="bg-slate-800 rounded-xl px-4 py-3 flex gap-1.5">
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+            <span class="w-2 h-2 bg-slate-500 rounded-full typing-dot"></span>
+          </div>
+        </div>
+      </div>
+      <div class="p-3 border-t border-slate-700/50 shrink-0">
+        <form @submit.prevent="sendMessage" class="flex gap-2">
+          <input v-model="inputMessage" type="text" placeholder="Ask about acupuncture..." class="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500/50" :disabled="isTyping" />
+          <button type="submit" :disabled="!inputMessage.trim() || isTyping" class="bg-amber-500 text-slate-900 rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-40 hover:bg-amber-400 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <transition name="fade">
+    <div v-if="showSettings" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" @click.self="showSettings = false">
+      <div class="bg-slate-900 rounded-2xl p-6 w-full max-w-md mx-4 border border-slate-700/50 shadow-2xl max-h-[80vh] overflow-y-auto scroll-thin">
+        <h2 class="text-lg font-semibold text-slate-100 mb-4">Settings</h2>
+        <div class="space-y-4">
+          <div>
+            <label class="flex items-center gap-2 text-sm text-slate-300 mb-2 cursor-pointer">
+              <input type="checkbox" v-model="useBackend" class="rounded bg-slate-700 border-slate-600 text-amber-500 focus:ring-amber-500" />
+              Use remote backend (Render/cloudflared)
+            </label>
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">{{ useBackend ? 'Backend URL' : 'Ollama URL' }}</label>
+            <input v-model="ollamaUrl" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50" :placeholder="useBackend ? 'https://your-app.onrender.com' : 'http://localhost:11434'" />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">Model</label>
+            <input v-model="modelName" type="text" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50" placeholder="qwen2.5:7b" />
+          </div>
+          <div>
+            <label class="block text-sm text-slate-400 mb-1">System prompt</label>
+            <textarea v-model="systemPrompt" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50 resize-none"></textarea>
+          </div>
+          <button @click="testConnection" class="w-full bg-slate-700 text-slate-200 py-2 rounded-lg text-sm hover:bg-slate-600 transition">Test Connection</button>
+        </div>
+        <button @click="showSettings = false" class="mt-4 w-full bg-amber-500 text-slate-900 py-2 rounded-lg text-sm font-medium hover:bg-amber-400 transition">Save & Close</button>
+      </div>
+    </div>
+  </transition>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+// Comprehensive acupuncture points with detailed location instructions
+// Atlas images from user's PDF (Atlas of Acupuncturology by Jaung-Geng Lin)
+const ATLAS_IMAGES = {
+  head: 'atlas_images/p000_img0.jpeg',
+  headFront: 'atlas_images/p000_img1.jpeg',
+  headBack: 'atlas_images/p001_img0.jpeg',
+  arm: 'atlas_images/p110_img0.jpeg',
+  foot: 'atlas_images/p200_img0.jpeg',
+  chest: 'atlas_images/p100_img0.jpeg',
+  back: 'atlas_images/p304_img0.jpeg',
+  stomach: 'atlas_images/p104_img0.jpeg',
+  spleen: 'atlas_images/p206_img0.jpeg',
+  liver: 'atlas_images/p217_img0.jpeg',
+  gallbladder: 'atlas_images/p117_img0.jpeg',
+  bladder: 'atlas_images/p308_img0.jpeg',
+  kidney: 'atlas_images/p210_img0.jpeg',
+  heart: 'atlas_images/p213_img0.jpeg',
+  lung: 'atlas_images/p211_img0.jpeg',
+  largeIntestine: 'atlas_images/p113_img0.jpeg',
+  governing: 'atlas_images/p310_img0.jpeg',
+  conception: 'atlas_images/p100_img1.jpeg',
+  sanjiao: 'atlas_images/p111_img0.jpeg',
+  smallIntestine: 'atlas_images/p113_img1.jpeg',
+  pericardium: 'atlas_images/p211_img1.jpeg',
+  extra: 'atlas_images/p314_img0.jpeg',
+};
+
+const POINTS = [
+
+];
+
+const MERIDIANS = [...new Set(POINTS.map(p => p.meridian))];
+
+const MERIDIANS = [...new Set(POINTS.map(p => p.meridian))];
+
+const SYMPTOM_CATEGORIES = [
+  {
+    name: 'Head & Face',
+    symptoms: [
+      {
+        name: 'Headache (general)',
+        description: 'General headache, tension headache',
+        patterns: [
+          {
+            name: 'Liver Yang Rising',
+            points: [
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Source point of Liver. Drains ascending Liver Yang.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Subdues rising Yang, calms the head.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'GB20'), why: 'Descends Yang, relieves occipital tension.', pattern: 'Liver Yang Rising' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin to anchor Yang.', pattern: 'Liver Yang Rising' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry. Symptoms: irritability, red face, tinnitus, worse with stress.'
+          },
+          {
+            name: 'Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Moves Qi and Blood, relieves pain. "Face and mouth: seek Hegu."', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Spreads stagnant Liver Qi.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'SJ5'), why: 'Opens Shaoyang channel, moves Qi in temples.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'GB8'), why: 'Local point for temporal headache.', pattern: 'Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or slightly dark. Pulse: wiry. Symptoms: distending pain, worse with stress, sighing.'
+          },
+          {
+            name: 'Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises clear Yang to the head.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi and Blood.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood, benefits the head.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Gentle pain relief without draining.', pattern: 'Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: dull headache, dizziness, blurred vision, worse with exertion.'
+          },
+        ]
+      },
+      {
+        name: 'Nasal congestion / Sinusitis',
+        description: 'Stuffy nose, sinus pressure, runny nose',
+        patterns: [
+          {
+            name: 'Wind-Cold',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Opens nasal passages immediately.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Releases exterior, opens nose.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'GV14'), why: 'Releases exterior, expels cold.', pattern: 'Wind-Cold' },
+              { ...POINTS.find(p => p.code === 'GB20'), why: 'Expels wind from head.', pattern: 'Wind-Cold' },
+            ],
+            diagnosticQ: 'Tongue: thin white coat. Pulse: floating tight. Symptoms: clear discharge, aversion to cold, no sweating.'
+          },
+          {
+            name: 'Wind-Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Opens nose, clears heat.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat, reduces fever.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Releases exterior heat.', pattern: 'Wind-Heat' },
+              { ...POINTS.find(p => p.code === 'SJ5'), why: 'Clears heat from Shaoyang.', pattern: 'Wind-Heat' },
+            ],
+            diagnosticQ: 'Tongue: red tip, thin yellow coat. Pulse: floating rapid. Symptoms: thick yellow discharge, fever, sore throat.'
+          },
+          {
+            name: 'Damp-Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI20'), why: 'Local point for nose.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'ST40'), why: 'Resolves phlegm-damp.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms dampness.', pattern: 'Damp-Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat.', pattern: 'Damp-Heat' },
+            ],
+            diagnosticQ: 'Tongue: thick yellow greasy coat. Pulse: slippery rapid. Symptoms: thick sticky discharge, facial pressure, heaviness.'
+          },
+        ]
+      },
+      {
+        name: 'Toothache',
+        description: 'Tooth pain, dental pain',
+        patterns: [
+          {
+            name: 'Stomach Fire',
+            points: [
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Master analgesic. LI meridian goes through teeth.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST6'), why: 'Local point for lower jaw.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Clears Stomach heat.', pattern: 'Stomach Fire' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Ying-Spring point, clears Stomach fire.', pattern: 'Stomach Fire' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow coat. Pulse: rapid. Symptoms: severe burning pain, swollen gums, thirst, preference for cold drinks.'
+          },
+          {
+            name: 'Kidney Yin Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin. "Teeth are surplus of bones (Kidney)."', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Pain relief.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST6'), why: 'Local point.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Yin.', pattern: 'Kidney Yin Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: red, little coat. Pulse: thin rapid. Symptoms: dull ache, loose teeth, night sweating, tinnitus.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Digestive',
+    symptoms: [
+      {
+        name: 'Nausea / Vomiting',
+        description: 'Morning sickness, motion sickness, chemo nausea',
+        patterns: [
+          {
+            name: 'Stomach Cold',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'THE anti-nausea point. Stops rebellious Qi.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Warms the middle jiao.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Harmonizes Stomach.', pattern: 'Stomach Cold' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Stomach Cold' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: cold sensation, relief with warmth, clear vomit.'
+          },
+          {
+            name: 'Stomach Heat',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Anti-nausea.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Clears Stomach heat.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears Stomach fire.', pattern: 'Stomach Heat' },
+              { ...POINTS.find(p => p.code === 'LI11'), why: 'Clears heat.', pattern: 'Stomach Heat' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow coat. Pulse: rapid. Symptoms: burning sensation, bitter taste, relief with cold drinks.'
+          },
+          {
+            name: 'Liver Qi Invading Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Stops nausea.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Soothes Liver Qi.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Harmonizes Stomach.', pattern: 'Liver Qi Invading Stomach' },
+              { ...POINTS.find(p => p.code === 'GB34'), why: 'Regulates Liver Qi.', pattern: 'Liver Qi Invading Stomach' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry. Symptoms: nausea triggered by stress, belching, distension.'
+          },
+        ]
+      },
+      {
+        name: 'Stomach pain / Bloating',
+        description: 'Epigastric pain, fullness after eating, indigestion',
+        patterns: [
+          {
+            name: 'Cold in Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Front-Mu of Stomach. Primary point.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Warms middle jiao.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Cold in Stomach' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms cold-damp.', pattern: 'Cold in Stomach' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: pain relieved by warmth, worse with cold food.'
+          },
+          {
+            name: 'Damp-Heat in Stomach',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Regulates Stomach.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Transforms damp.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'SP9'), why: 'Clears damp-heat.', pattern: 'Damp-Heat in Stomach' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat.', pattern: 'Damp-Heat in Stomach' },
+            ],
+            diagnosticQ: 'Tongue: yellow greasy coat. Pulse: slippery rapid. Symptoms: burning pain, thirst, bitter taste.'
+          },
+          {
+            name: 'Food Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'CV12'), why: 'Promotes digestion.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Harmonizes Stomach.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Moves stagnation.', pattern: 'Food Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat from stagnation.', pattern: 'Food Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: thick greasy coat. Pulse: slippery. Symptoms: bloating after eating, belching, acid reflux.'
+          },
+        ]
+      },
+      {
+        name: 'Diarrhea',
+        description: 'Loose stools, chronic diarrhea',
+        patterns: [
+          {
+            name: 'Spleen Qi Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates Large Intestine.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Spleen Qi.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Strengthens Spleen.', pattern: 'Spleen Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Spleen Qi Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale, teeth marks. Pulse: weak. Symptoms: chronic, fatigue, poor appetite, loose stools.'
+          },
+          {
+            name: 'Damp-Heat in Intestines',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates intestines.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Transforms damp.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears damp-heat.', pattern: 'Damp-Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'BL25'), why: 'Back-Shu of Large Intestine.', pattern: 'Damp-Heat in Intestines' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow greasy coat. Pulse: slippery rapid. Symptoms: urgent, burning, foul odor.'
+          },
+        ]
+      },
+      {
+        name: 'Constipation',
+        description: 'Difficulty passing stool, infrequent bowel movements',
+        patterns: [
+          {
+            name: 'Heat in Intestines',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates Large Intestine.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Promotes peristalsis.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'ST44'), why: 'Clears heat, moistens.', pattern: 'Heat in Intestines' },
+              { ...POINTS.find(p => p.code === 'BL25'), why: 'Back-Shu of Large Intestine.', pattern: 'Heat in Intestines' },
+            ],
+            diagnosticQ: 'Tongue: red, yellow dry coat. Pulse: rapid. Symptoms: dry hard stool, burning anus, thirst.'
+          },
+          {
+            name: 'Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Regulates intestines.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Generates Blood.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood, moistens.', pattern: 'Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI6'), why: 'Moistens intestines.', pattern: 'Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: dry stool, dizziness, pale face, common in elderly/postpartum.'
+          },
+          {
+            name: 'Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST25'), why: 'Moves Qi in intestines.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Liver Qi.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Promotes descent.', pattern: 'Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Moves Qi.', pattern: 'Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or slightly dark. Pulse: wiry. Symptoms: bloating, distension, worse with stress.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Mental-Emotional',
+    symptoms: [
+      {
+        name: 'Insomnia',
+        description: 'Difficulty falling asleep, staying asleep, restless sleep',
+        patterns: [
+          {
+            name: 'Heart Blood Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen. Primary point for sleep.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Blood.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Generates Blood.', pattern: 'Heart Blood Deficiency' },
+              { ...POINTS.find(p => p.code === 'Yintang'), why: 'Calms mind.', pattern: 'Heart Blood Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: thin. Symptoms: difficulty staying asleep, palpitations, poor memory.'
+          },
+          {
+            name: 'Liver Fire',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Drains Liver fire.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Calms spirit.', pattern: 'Liver Fire' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Liver Fire' },
+            ],
+            diagnosticQ: 'Tongue: red sides. Pulse: wiry rapid. Symptoms: wakes at 1-3am, irritability, vivid dreams.'
+          },
+          {
+            name: 'Kidney Yin Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Nourishes Kidney Yin.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Nourishes Yin.', pattern: 'Kidney Yin Deficiency' },
+              { ...POINTS.find(p => p.code === 'Yintang'), why: 'Calms mind.', pattern: 'Kidney Yin Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: red, little coat. Pulse: thin rapid. Symptoms: night sweating, tinnitus, lower back pain, five-palm heat.'
+          },
+        ]
+      },
+      {
+        name: 'Anxiety / Stress',
+        description: 'Nervousness, worry, feeling overwhelmed',
+        patterns: [
+          {
+            name: 'Heart Qi Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Heart Qi Deficiency' },
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi.', pattern: 'Heart Qi Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale. Pulse: weak. Symptoms: palpitations, shortness of breath, fatigue.'
+          },
+          {
+            name: 'Liver Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves stagnant Qi.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'HT7'), why: 'Calms Shen.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'GB34'), why: 'Soothes Liver.', pattern: 'Liver Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal or red sides. Pulse: wiry. Symptoms: tension, chest tightness, sighing, emotional fluctuation.'
+          },
+        ]
+      },
+      {
+        name: 'Depression',
+        description: 'Low mood, lack of motivation, heaviness',
+        patterns: [
+          {
+            name: 'Liver Qi Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises Yang, lifts mood.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Qi.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'CV17'), why: 'Opens chest.', pattern: 'Liver Qi Stagnation' },
+              { ...POINTS.find(p => p.code === 'PC6'), why: 'Calms heart.', pattern: 'Liver Qi Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: normal. Pulse: wiry. Symptoms: emotional constraint, chest distension, mood swings.'
+          },
+          {
+            name: 'Spleen Qi Deficiency with Phlegm',
+            points: [
+              { ...POINTS.find(p => p.code === 'ST36'), why: 'Tonifies Qi.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Transforms phlegm.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'ST40'), why: 'Resolves phlegm.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+              { ...POINTS.find(p => p.code === 'GV20'), why: 'Raises clear Yang.', pattern: 'Spleen Qi Deficiency with Phlegm' },
+            ],
+            diagnosticQ: 'Tongue: pale, swollen, teeth marks, greasy coat. Pulse: slippery weak. Symptoms: heaviness, foggy mind, overthinking.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Pain',
+    symptoms: [
+      {
+        name: 'Lower back pain',
+        description: 'Lumbar pain, sciatica, back strain',
+        patterns: [
+          {
+            name: 'Kidney Deficiency',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu of Kidneys.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'KI3'), why: 'Source point of Kidneys.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'GV4'), why: 'Tonifies Yang.', pattern: 'Kidney Deficiency' },
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Command point for back.', pattern: 'Kidney Deficiency' },
+            ],
+            diagnosticQ: 'Tongue: pale or red. Pulse: deep weak. Symptoms: chronic, worse with exertion, soreness more than pain.'
+          },
+          {
+            name: 'Cold-Damp Bi',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu of Kidneys.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Opens channel.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'GV4'), why: 'Warms with moxa.', pattern: 'Cold-Damp Bi' },
+              { ...POINTS.find(p => p.code === 'GB30'), why: 'Opens hip channel.', pattern: 'Cold-Damp Bi' },
+            ],
+            diagnosticQ: 'Tongue: pale, white greasy coat. Pulse: slow deep. Symptoms: heavy sensation, worse in cold/damp, relief with warmth.'
+          },
+          {
+            name: 'Blood Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'BL40'), why: 'Command point. Bleed for acute pain.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'BL23'), why: 'Back-Shu.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'GV1'), why: 'Opens channel.', pattern: 'Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'SP10'), why: 'Moves Blood.', pattern: 'Blood Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: dark spots. Pulse: choppy. Symptoms: stabbing pain, fixed location, worse at night.'
+          },
+        ]
+      },
+    ]
+  },
+  {
+    name: 'Women\'s Health',
+    symptoms: [
+      {
+        name: 'Menstrual pain (dysmenorrhea)',
+        description: 'Painful periods, cramps',
+        patterns: [
+          {
+            name: 'Cold in Uterus',
+            points: [
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Primary gynecology point.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'CV4'), why: 'Warms uterus.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'CV6'), why: 'Warms with moxa.', pattern: 'Cold in Uterus' },
+              { ...POINTS.find(p => p.code === 'ST29'), why: 'Local point.', pattern: 'Cold in Uterus' },
+            ],
+            diagnosticQ: 'Tongue: pale, white coat. Pulse: slow deep. Symptoms: cramping relieved by warmth, dark clots, cold extremities.'
+          },
+          {
+            name: 'Qi and Blood Stagnation',
+            points: [
+              { ...POINTS.find(p => p.code === 'SP6'), why: 'Moves Blood.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'LI4'), why: 'Moves Qi and Blood.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'LV3'), why: 'Moves Liver Qi.', pattern: 'Qi and Blood Stagnation' },
+              { ...POINTS.find(p => p.code === 'SP8'), why: 'Xi-cleft, stops pain.', pattern: 'Qi and Blood Stagnation' },
+            ],
+            diagnosticQ: 'Tongue: dark, purple spots. Pulse: choppy. Symptoms: sharp pain, clots, relief after passing clots.'
+          },
+        ]
+      },
+    ]
+  },
+];
+
+createApp({
+  setup() {
+    const currentTab = ref('atlas');
+    const atlasSearch = ref('');
+    const activeMeridian = ref(null);
+    const selectedPoint = ref(null);
+    const symptomSearch = ref('');
+    const selectedSymptom = ref(null);
+    const activePattern = ref(0);
+    const messages = ref([]);
+    const inputMessage = ref('');
+    const isTyping = ref(false);
+    const showSettings = ref(false);
+    const ollamaUrl = ref('');
+    const modelName = ref('qwen2.5:7b');
+    const useBackend = ref(false);
+    const systemPrompt = ref('You are an expert acupuncturist. For each query: 1) List ALL possible TCM patterns (excess/deficiency, heat/cold, qi stagnation, blood stasis, yin/yang imbalance). 2) For each pattern, give a clear recipe with point codes, locations, and rationale. 3) Label each recipe clearly: "Pattern: X". 4) Include diagnostic questions (tongue, pulse, associated symptoms) to help choose between patterns. 5) Be practical and reference specific points with location instructions.');
+    const ollamaConnected = ref(false);
+
+    const meridians = MERIDIANS;
+
+    const selectedPointImage = computed(() => {
+      if (!selectedPoint.value) return null;
+      const meridian = selectedPoint.value.meridian;
+      const m = meridian.toLowerCase();
+      if (m.includes('governing')) return ATLAS_IMAGES.governing;
+      if (m.includes('conception')) return ATLAS_IMAGES.conception;
+      if (m.includes('stomach')) return ATLAS_IMAGES.stomach;
+      if (m.includes('spleen')) return ATLAS_IMAGES.spleen;
+      if (m.includes('liver')) return ATLAS_IMAGES.liver;
+      if (m.includes('gallbladder')) return ATLAS_IMAGES.gallbladder;
+      if (m.includes('bladder')) return ATLAS_IMAGES.bladder;
+      if (m.includes('kidney')) return ATLAS_IMAGES.kidney;
+      if (m.includes('heart')) return ATLAS_IMAGES.heart;
+      if (m.includes('lung')) return ATLAS_IMAGES.lung;
+      if (m.includes('large intestine')) return ATLAS_IMAGES.largeIntestine;
+      if (m.includes('pericardium')) return ATLAS_IMAGES.pericardium;
+      if (m.includes('san jiao') || m.includes('triple')) return ATLAS_IMAGES.sanjiao;
+      if (m.includes('small intestine')) return ATLAS_IMAGES.smallIntestine;
+      if (m.includes('extra')) return ATLAS_IMAGES.extra;
+      return ATLAS_IMAGES.back;
+    });
+
+    const filteredPoints = computed(() => {
+      let pts = POINTS;
+      if (activeMeridian.value) pts = pts.filter(p => p.meridian === activeMeridian.value);
+      if (atlasSearch.value) {
+        const q = atlasSearch.value.toLowerCase();
+        pts = pts.filter(p => p.code.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.meridian.toLowerCase().includes(q) || p.location.toLowerCase().includes(q));
+      }
+      return pts;
+    });
+
+    const filteredSymptomCategories = computed(() => {
+      if (!symptomSearch.value) return SYMPTOM_CATEGORIES;
+      const q = symptomSearch.value.toLowerCase();
+      return SYMPTOM_CATEGORIES.map(cat => ({
+        ...cat,
+        symptoms: cat.symptoms.filter(s => {
+          const nameMatch = s.name.toLowerCase().includes(q);
+          const descMatch = s.description.toLowerCase().includes(q);
+          const pointsMatch = s.points ? s.points.some(p => p.code.toLowerCase().includes(q)) : false;
+          const patternsMatch = s.patterns ? s.patterns.some(pat => pat.name.toLowerCase().includes(q) || pat.points.some(p => p.code.toLowerCase().includes(q))) : false;
+          return nameMatch || descMatch || pointsMatch || patternsMatch;
+        })
+      })).filter(cat => cat.symptoms.length > 0);
+    });
+
+    async function sendMessage() {
+      const text = inputMessage.value.trim();
+      if (!text || isTyping.value) return;
+      messages.value.push({ role: 'user', content: text });
+      inputMessage.value = '';
+      isTyping.value = true;
+      await nextTick();
+      scrollToBottom();
+
+      const apiUrl = useBackend.value ? `${ollamaUrl.value}/api/chat` : `${ollamaUrl.value}/api/chat`;
+
+      try {
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: modelName.value,
+            messages: [
+              { role: 'system', content: systemPrompt.value },
+              ...messages.value.slice(-10).map(m => ({ role: m.role, content: m.content }))
+            ],
+            stream: true,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        ollamaConnected.value = true;
+
+        let content = '';
+        const msgIdx = messages.value.length;
+        messages.value.push({ role: 'assistant', content: '' });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(Boolean);
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.message?.content) {
+                content += data.message.content;
+                messages.value[msgIdx].content = content;
+                await nextTick();
+                scrollToBottom();
+              }
+            } catch {}
+          }
+        }
+      } catch (err) {
+        ollamaConnected.value = false;
+        messages.value.push({ role: 'assistant', content: `Connection error: ${err.message}. Check settings.` });
+      } finally {
+        isTyping.value = false;
+      }
+    }
+
+    function quickQuestion(q) {
+      inputMessage.value = q;
+      sendMessage();
+    }
+
+    function askAboutPoint(point) {
+      inputMessage.value = `Tell me about ${point.code} ${point.name}. Location, indications, needling technique.`;
+      currentTab.value = 'chat';
+      sendMessage();
+    }
+
+    function askAboutSymptom(symptom) {
+      let pointList;
+      if (symptom.patterns) {
+        const allPoints = symptom.patterns.flatMap(p => p.points);
+        const uniqueCodes = [...new Set(allPoints.map(p => p.code))];
+        pointList = uniqueCodes.join(', ');
+      } else {
+        pointList = symptom.points.map(p => `${p.code} ${p.name}`).join(', ');
+      }
+      inputMessage.value = `Give me a detailed acupuncture prescription for ${symptom.name}. Points: ${pointList}. Show all patterns with diagnosis questions (tongue, pulse, symptoms). Include location instructions and technique for each point.`;
+      currentTab.value = 'chat';
+      sendMessage();
+    }
+
+    function selectSymptom(symptom) {
+      selectedSymptom.value = symptom;
+      activePattern.value = 0;
+    }
+
+    function selectPoint(point) {
+      selectedPoint.value = point;
+    }
+
+    function openPointInAtlas(point) {
+      selectedSymptom.value = null;
+      currentTab.value = 'atlas';
+      selectedPoint.value = point;
+    }
+
+    function scrollToBottom() {
+      const el = document.querySelector('.scroll-thin:last-of-type, [ref="chatMessages"]');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    function imageError(e) {
+      e.target.style.display = 'none';
+      const parent = e.target.parentElement;
+      if (parent) {
+        const existing = parent.querySelector('.img-fallback');
+        if (!existing) {
+          const fb = document.createElement('div');
+          fb.className = 'img-fallback flex items-center justify-center py-8 text-slate-500 text-sm';
+          fb.textContent = 'Image not available';
+          parent.appendChild(fb);
+        }
+      }
+    }
+
+    async function testConnection() {
+      try {
+        const endpoint = useBackend.value ? `${ollamaUrl.value}/api/tags` : `${ollamaUrl.value}/api/tags`;
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          ollamaConnected.value = true;
+          const data = await res.json();
+          if (data.models?.length) modelName.value = data.models[0].name;
+        } else {
+          ollamaConnected.value = false;
+        }
+      } catch {
+        ollamaConnected.value = false;
+      }
+    }
+
+    function formatMarkdown(text) {
+      return text
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/`(.+?)`/g, '<code class="bg-slate-700 px-1 rounded text-xs">$1</code>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function toggleSettings() {
+      showSettings.value = !showSettings.value;
+    }
+
+    onMounted(() => {
+      testConnection();
+    });
+
+    return {
+      currentTab, atlasSearch, activeMeridian, selectedPoint, filteredPoints, selectedPointImage,
+      symptomSearch, selectedSymptom, activePattern, filteredSymptomCategories,
+      messages, inputMessage, isTyping, showSettings, ollamaUrl, modelName, useBackend, systemPrompt,
+      ollamaConnected, meridians,
+      sendMessage, quickQuestion, askAboutPoint, askAboutSymptom,
+      selectSymptom, selectPoint, openPointInAtlas, testConnection, formatMarkdown, toggleSettings, imageError,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
