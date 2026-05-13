@@ -114,7 +114,7 @@ body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; 
     <div class="login-box">
         <h1>🔒 Acupuncture Atlas</h1>
         <p>Введите пароль для доступа</p>
-        <input type="password" id="loginPassword" placeholder="Пароль" onkeydown="if(event.key==='Enter')login()">
+        <input type="password" id="loginPassword" autocomplete="off" placeholder="Пароль" onkeydown="if(event.key==='Enter')login()">
         <button onclick="login()">Войти</button>
         <div class="login-error" id="loginError">Неверный пароль</div>
     </div>
@@ -539,7 +539,7 @@ function renderChatWithStop() {
     let html = '<div class="settings-panel" id="settingsPanel">';
     html += '<div class="setting-row"><div class="setting-label">Provider</div><select class="setting-input" id="providerSelect"><option value="ollama"' + (activeProvider === 'ollama' ? ' selected' : '') + '>Ollama (Local + Cloud)</option><option value="openrouter"' + (activeProvider === 'openrouter' ? ' selected' : '') + '>OpenRouter</option><option value="nvidia"' + (activeProvider === 'nvidia' ? ' selected' : '') + '>NVIDIA (build.nvidia.com)</option></select></div>';
     html += '<div class="setting-row"><div class="setting-label">Model</div><input class="setting-input" id="modelNameInput" value="' + modelName + '"></div>';
-    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="password" placeholder="sk-..."></div>';
+    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="text" autocomplete="off" placeholder="sk-..."></div>';
     html += '<button class="quick-btn" onclick="saveSettings()">Save &amp; Apply</button>';
     html += '</div>';
 
@@ -656,7 +656,7 @@ function renderChat() {
     let html = '<div class="settings-panel" id="settingsPanel">';
     html += '<div class="setting-row"><div class="setting-label">Provider</div><select class="setting-input" id="providerSelect"><option value="ollama"' + (activeProvider === 'ollama' ? ' selected' : '') + '>Ollama (Local + Cloud)</option><option value="openrouter"' + (activeProvider === 'openrouter' ? ' selected' : '') + '>OpenRouter</option><option value="nvidia"' + (activeProvider === 'nvidia' ? ' selected' : '') + '>NVIDIA (build.nvidia.com)</option></select></div>';
     html += '<div class="setting-row"><div class="setting-label">Model</div><input class="setting-input" id="modelNameInput" value="' + modelName + '"></div>';
-    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="password" placeholder="sk-..."></div>';
+    html += '<div class="setting-row" id="apiKeyRow"><div class="setting-label">API Key (для OpenRouter / NVIDIA)</div><input class="setting-input" id="apiKeyInput" type="text" autocomplete="off" placeholder="sk-..."></div>';
     html += '<button class="quick-btn" onclick="saveSettings()">Save &amp; Apply</button>';
     html += '</div>';
 
@@ -665,7 +665,7 @@ function renderChat() {
 
     if (chatMessages.length === 0) {
         html += '<div class="empty-chat">';
-        html += '<p style="font-size:1.1rem;margin-bottom:20px;">Ask about acupuncture points, symptoms, or treatments</p>';
+        html += '<p style="font-size:1.1rem;margin-bottom:20px;">Задайте вопрос по акупунктуре</p>';
         html += '<button class="quick-btn" onclick="sendChat(\'Точки от головной боли\')">Точки от головной боли</button>';
         html += '<button class="quick-btn" onclick="sendChat(\'Расскажи про ST36 Zusanli\')">Расскажи про ST36 Zusanli</button>';
         html += '<button class="quick-btn" onclick="sendChat(\'Рецепт от стресса и тревоги\')">Рецепт от стресса и тревоги</button>';
