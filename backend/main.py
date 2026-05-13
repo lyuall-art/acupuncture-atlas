@@ -544,7 +544,7 @@ async def chat(request: Request):
         messages[0]["content"] += rag_ctx
 
     ollama_body = {"model": model, "messages": messages, "stream": stream}
-    openai_body = {"model": model, "messages": messages, "stream": stream, "max_tokens": 4096}
+    openai_body = {"model": model, "messages": messages, "stream": stream, "max_tokens": 4096, "temperature": 1.0, "top_p": 0.95}
 
     chat_ep = provider["chat_endpoint"]
     req_body = ollama_body if provider["api_format"] == "ollama" else openai_body
@@ -557,20 +557,28 @@ async def chat(request: Request):
                     async for chunk in resp.aiter_bytes():
                         yield chunk
                 else:
-                    async for line in resp.aiter_lines():
-                        if not line:
-                            continue
-                        if line.startswith("data: "):
-                            payload = line[6:]
-                            if payload.strip() == "[DONE]":
+                    buffer = ""
+                    async for chunk in resp.aiter_bytes():
+                        decoded = chunk.decode()
+                        buffer += decoded
+                        while "\n" in buffer:
+                            line, buffer = buffer.split("\n", 1)
+                            line = line.strip()
+                            if not line:
                                 continue
-                            converted = convert_openai_stream(payload, provider_name)
-                            if converted:
-                                yield converted.encode()
-                        elif line.startswith("{"):
-                            converted = convert_openai_stream(line, provider_name)
-                            if converted:
-                                yield converted.encode()
+                            if line.startswith("data: "):
+                                payload = line[6:]
+                                if payload.strip() == "[DONE]":
+                                    continue
+                                try:
+                                    data = json.loads(payload)
+                                    if "choices" in data and len(data["choices"]) > 0:
+                                        delta = data["choices"][0].get("delta", {})
+                                        content = delta.get("content", "")
+                                        if content:
+                                            yield json.dumps({"message": {"content": content}}).encode()
+                                except json.JSONDecodeError:
+                                    pass
 
     if stream:
         return StreamingResponse(stream_response(), media_type="application/x-ndjson")
