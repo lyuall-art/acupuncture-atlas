@@ -407,8 +407,19 @@ let currentTab = 'atlas';
 let searchQuery = '';
 // Ollama URL is handled by backend proxy; frontend uses relative API endpoints
 let ollamaUrl = localStorage.getItem('ollamaUrl') || ''; // Kept for settings compatibility but not used for API calls
-let modelName = localStorage.getItem('modelName') || 'gemma4:31b-cloud';
-let activeProvider = localStorage.getItem('activeProvider') || 'ollama';
+let modelName = localStorage.getItem('modelName') || '';
+let activeProvider = localStorage.getItem('activeProvider') || '';
+
+// Load provider from backend on startup
+fetch('/api/provider').then(r => r.json()).then(d => {
+    if (d && d.active) {
+        if (!activeProvider) activeProvider = d.active;
+        if (!modelName) modelName = d.model || '';
+    }
+}).catch(() => {
+    if (!activeProvider) activeProvider = 'ollama';
+    if (!modelName) modelName = 'gemma4:31b-cloud';
+});
 let chatMessages = [];
 let isTyping = false;
 let abortController = null;
