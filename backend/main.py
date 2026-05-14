@@ -4,7 +4,7 @@ import httpx
 import re
 from datetime import datetime
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -496,6 +496,44 @@ async def auto_save_point(messages: list):
             })
             save_json(POINTS_FILE, points_data)
 
+async def save_points_from_response(messages: list, response_text: str):
+    """Parse AI response for point codes and save them to atlas"""
+    if not response_text:
+        return
+    for m in reversed(messages):
+        if m.get("role") == "user":
+            user_text = m.get("content", "")
+            break
+    else:
+        user_text = ""
+
+    meridian_map = {"ST": "Stomach", "LU": "Lung", "LI": "Large Intestine", "HT": "Heart",
+                   "SI": "Small Intestine", "PC": "Pericardium", "SJ": "Triple Burner",
+                   "GB": "Gallbladder", "LV": "Liver", "KI": "Kidney", "BL": "Bladder",
+                   "GV": "Governing Vessel", "CV": "Conception Vessel", "EX": "Extra"}
+
+    for match in re.finditer(r'\b(ST|LU|LI|HT|SI|PC|SJ|GB|LV|KI|BL|GV|CV|EX)[ ]*([0-9]+[A-Za-z]*)\b', response_text, re.IGNORECASE):
+        code = (match.group(1).upper() + match.group(2).upper()).replace(" ", "")
+        points_data = load_json(POINTS_FILE, {"points": []})
+        if any(p.get("code") == code for p in points_data.get("points", [])):
+            continue
+        name = code
+        lines = response_text.split('\n')
+        for i, line in enumerate(lines):
+            if code.upper() in line.upper() and i + 1 < len(lines):
+                nl = line.replace(code, "").strip().lstrip("(—– ").rstrip(")")
+                if nl and len(nl) > 2:
+                    name = nl.split(',')[0].strip()[:80]
+                    break
+        points_data.setdefault("points", []).append({
+            "code": code, "name": name,
+            "meridian": meridian_map.get(code[:2], "Unknown"),
+            "location": user_text[:300], "location_detail": "",
+            "technique": "", "notes": "", "indications": [],
+            "created_at": datetime.now().isoformat(), "source": "agent"
+        })
+        save_json(POINTS_FILE, points_data)
+
 def convert_openai_stream(line: str, provider: str) -> str:
     """Convert OpenAI streaming line to Ollama-compatible format for frontend."""
     try:
@@ -510,7 +548,7 @@ def convert_openai_stream(line: str, provider: str) -> str:
     return ""
 
 @app.post("/api/chat")
-async def chat(request: Request):
+async def chat(request: Request, background_tasks: BackgroundTasks):
     body = await request.json()
     messages = body.get("messages", [])
     model = body.get("model", "")
@@ -551,17 +589,21 @@ async def chat(request: Request):
     req_body = ollama_body if provider["api_format"] == "ollama" else openai_body
 
     async def stream_response():
+        full_text = ""
         async with httpx.AsyncClient(timeout=120) as client:
             async with client.stream("POST", f"{provider['base_url']}{chat_ep}",
                 json=req_body, headers=get_headers(provider)) as resp:
                 if provider["api_format"] == "ollama":
                     async for chunk in resp.aiter_bytes():
+                        decoded = chunk.decode()
+                        full_text += decoded
                         yield chunk
                 else:
                     buffer = ""
                     async for chunk in resp.aiter_bytes():
                         decoded = chunk.decode()
                         buffer += decoded
+                        full_text += decoded
                         while "\n" in buffer:
                             line, buffer = buffer.split("\n", 1)
                             line = line.strip()
@@ -580,6 +622,9 @@ async def chat(request: Request):
                                             yield json.dumps({"message": {"content": content}}).encode()
                                 except json.JSONDecodeError:
                                     pass
+        # After streaming completes, save points from the full response
+        if full_text:
+            await save_points_from_response(messages, full_text)
 
     if stream:
         return StreamingResponse(stream_response(), media_type="application/x-ndjson")
@@ -588,10 +633,15 @@ async def chat(request: Request):
             res = await client.post(f"{provider['base_url']}{chat_ep}",
                 json=req_body, headers=get_headers(provider))
             if provider["api_format"] == "ollama":
-                return res.json()
+                resp_data = res.json()
+                reply = resp_data.get("message", {}).get("content", "")
+                await save_points_from_response(messages, reply)
+                return resp_data
             else:
                 data = res.json()
                 msg = data.get("choices", [{}])[0].get("message", {})
+                reply = msg.get("content", "")
+                await save_points_from_response(messages, reply)
                 return {"message": msg}
 
 @app.post("/api/generate")
