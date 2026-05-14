@@ -594,18 +594,26 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
             async with client.stream("POST", f"{provider['base_url']}{chat_ep}",
                 json=req_body, headers=get_headers(provider)) as resp:
                 if provider["api_format"] == "ollama":
+                    full_bytes = b""
                     async for chunk in resp.aiter_bytes():
-                        decoded = chunk.decode()
-                        try:
-                            # Extract content from Ollama JSON chunk
-                            chunk_data = json.loads(decoded)
-                            content = chunk_data.get("message", {}).get("content", "")
-                            full_text += content
-                        except json.JSONDecodeError:
-                            pass
+                        full_bytes += chunk
                         yield chunk
+                    # After streaming completes, parse and save points
+                    full_text = full_bytes.decode('utf-8', errors='ignore')
+                    # Extract content if it's Ollama JSON
+                    # Ollama streaming returns concatenated JSON objects
+                    extracted_text = ""
+                    for line in full_text.splitlines():
+                        if not line.strip(): continue
+                        try:
+                            data = json.loads(line)
+                            extracted_text += data.get("message", {}).get("content", "")
+                        except: pass
+                    if extracted_text:
+                        await save_points_from_response(messages, extracted_text)
                 else:
                     buffer = ""
+                    full_text = ""
                     async for chunk in resp.aiter_bytes():
                         decoded = chunk.decode()
                         buffer += decoded
@@ -628,9 +636,9 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
                                             yield json.dumps({"message": {"content": content}}).encode()
                                 except json.JSONDecodeError:
                                     pass
-        # After streaming completes, save points from the full response
-        if full_text:
-            await save_points_from_response(messages, full_text)
+                    # After streaming completes, save points from the full response
+                    if full_text:
+                        await save_points_from_response(messages, full_text)
 
     if stream:
         return StreamingResponse(stream_response(), media_type="application/x-ndjson")
