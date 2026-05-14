@@ -596,14 +596,19 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
                 if provider["api_format"] == "ollama":
                     async for chunk in resp.aiter_bytes():
                         decoded = chunk.decode()
-                        full_text += decoded
+                        try:
+                            # Extract content from Ollama JSON chunk
+                            chunk_data = json.loads(decoded)
+                            content = chunk_data.get("message", {}).get("content", "")
+                            full_text += content
+                        except json.JSONDecodeError:
+                            pass
                         yield chunk
                 else:
                     buffer = ""
                     async for chunk in resp.aiter_bytes():
                         decoded = chunk.decode()
                         buffer += decoded
-                        full_text += decoded
                         while "\n" in buffer:
                             line, buffer = buffer.split("\n", 1)
                             line = line.strip()
@@ -619,6 +624,7 @@ async def chat(request: Request, background_tasks: BackgroundTasks):
                                         delta = data["choices"][0].get("delta", {})
                                         content = delta.get("content", "")
                                         if content:
+                                            full_text += content
                                             yield json.dumps({"message": {"content": content}}).encode()
                                 except json.JSONDecodeError:
                                     pass
