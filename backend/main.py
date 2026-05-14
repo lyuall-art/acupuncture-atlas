@@ -94,10 +94,9 @@ def save_json(filepath, data):
 
 SYSTEM_PROMPT = """Ты - эксперт по акупунктуре и ТКМ.
 
-СТРОГОЕ ПРАВИЛО 1: Никогда НЕ выдумывай информацию о точках. 
-СТРОГОЕ ПРАВИЛО 2: Если тебя просят описать точку, которой нет в твоих достоверных данных — ответь ОДНИМ предложением: "У меня нет точной информации об этой точке. Проверьте вкладку Атлас." НЕ пиши никаких дополнительных описаний, локаций, функций или показаний.
-СТРОГОЕ ПРАВИЛО 3: Запрещено придумывать локации, функции, показания или TCM паттерны. 
-СТРОГОЕ ПРАВИЛО 4: Отвечай на русском языке.
+ПРАВИЛО 1: Если пользователь ПРЕДОСТАВЛЯЕТ информацию о точке (локацию, функции, показания) — прими её, подтверди сохранение и используй в ответе. Не говори "нет информации", если пользователь сам дал данные.
+ПРАВИЛО 2: Никогда НЕ выдумывай локации, функции или показания. Если пользователь не дал данные, а у тебя их нет — ответь: "У меня нет точной информации. Проверьте вкладку Атлас."
+ПРАВИЛО 3: Отвечай на русском языке.
 """
 
 # ─── RAG (Retrieval-Augmented Generation) ───
@@ -472,8 +471,15 @@ async def auto_save_point(messages: list):
         if not match:
             continue
         code = (match.group(1).upper() + match.group(2).upper()).replace(" ", "")
-        name_match = re.search(r'[-(—–](.+?)(?:\n|$|,)', content)
-        name = name_match.group(1).strip() if name_match else code
+        # Try to extract name: "KI11 (Название)" or "KI11 — Название" or "KI11 Название"
+        name = code
+        name_match = re.search(r'[-(—–\s]([A-Za-zА-Яа-я].+?)(?:\)|\n|$|,)', content)
+        if name_match:
+            name = name_match.group(1).strip().rstrip(')')
+        # Also try: "точка KI11 (Название)" 
+        name_match2 = re.search(r'точ[кку]\s+\w+\s*\(([^)]+)\)', content)
+        if name_match2:
+            name = name_match2.group(1).strip()
         meridian_map = {"ST": "Stomach", "LU": "Lung", "LI": "Large Intestine", "HT": "Heart",
                        "SI": "Small Intestine", "PC": "Pericardium", "SJ": "Triple Burner",
                        "GB": "Gallbladder", "LV": "Liver", "KI": "Kidney", "BL": "Bladder",

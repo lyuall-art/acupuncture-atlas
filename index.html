@@ -590,7 +590,7 @@ function renderAtlas() {
         html += '<div class="point-card" id="point-' + p.code + '">';
         html += '<div class="point-header" onclick="togglePoint(\'' + p.code + '\')">';
         html += '<div class="point-code">' + p.code + '</div>';
-        html += '<div class="point-name">' + p.name + '</div>';
+        html += '<div class="point-name">' + (p.name && p.name !== p.code ? p.name : '') + '</div>';
         html += '<div class="point-meridian">' + p.meridian + '</div>';
         html += '<div class="chevron">&#9660;</div>';
         html += '</div>';
